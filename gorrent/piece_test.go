@@ -3,16 +3,27 @@ package gorrent
 import (
 	"bytes"
 	"crypto/sha1"
+	"errors"
+	"fmt"
 	"reflect"
+	"strings"
 	"testing"
 )
 
-func TestPieceBuffer(t *testing.T) {
+var errBrokenReader = errors.New("readerror :)")
 
-	t.Run("NewPieceBuffer should create a new buffer", func(t *testing.T) {
-		var lengths = []int64{1234, 0, 666}
+type brokenReaderT struct{}
+
+func (b *brokenReaderT) Read(p []byte) (int, error) {
+	return 0, errBrokenReader
+}
+
+func TestMemoryPieceBuffer(t *testing.T) {
+
+	t.Run("NewMemoryPieceBuffer should create a new buffer", func(t *testing.T) {
+		var lengths = []int{1234, 0, 666}
 		for _, length := range lengths {
-			pb := NewPieceBuffer(length)
+			pb := NewMemoryPieceBuffer(length)
 			if pb.pieceLength != length {
 				t.Fatalf("Expected length '%d', got '%d'", length, pb.pieceLength)
 			}
@@ -20,17 +31,17 @@ func TestPieceBuffer(t *testing.T) {
 	})
 
 	t.Run("Length() should return proper length", func(t *testing.T) {
-		var lengths = []int64{1234, 0, 666}
+		var lengths = []int{1234, 0, 666}
 		for _, length := range lengths {
-			pb := NewPieceBuffer(length)
-			if pb.Length() != length {
+			pb := NewMemoryPieceBuffer(length)
+			if pb.PieceLength() != length {
 				t.Fatalf("Expected length '%d', got '%d'", length, pb.pieceLength)
 			}
 		}
 	})
 
 	t.Run("CreatePieces should properly create pieces", func(t *testing.T) {
-		pb := NewPieceBuffer(int64(10))
+		pb := NewMemoryPieceBuffer(10)
 		data := []byte("abcdefghijlkmnopqrstuvwxyz")
 
 		expectedPieces := []Sha1Hash{
@@ -40,14 +51,17 @@ func TestPieceBuffer(t *testing.T) {
 
 		expectedRemainingBuffer := []byte("uvwxyz")
 
-		pieces := pb.CreatePieces(data)
+		pieces, err := pb.CreatePieces(bytes.NewReader(data))
+		if err != nil {
+			t.Fatalf("Unexpected error: %s", err)
+		}
 
 		if reflect.DeepEqual(pieces, expectedPieces) == false {
 			t.Fatalf("Expected piece hashes %v, got %v", expectedPieces, pieces)
 		}
 
-		if bytes.Equal(pb.buf, expectedRemainingBuffer) == false {
-			t.Fatalf("Expected remaining buffer '%s', got '%s'", expectedRemainingBuffer, pb.buf)
+		if bytes.Equal(pb.buf.Bytes(), expectedRemainingBuffer) == false {
+			t.Fatalf("Expected remaining buffer '%s', got '%s'", expectedRemainingBuffer, pb.buf.Bytes())
 		}
 
 		expectedPieces = []Sha1Hash{
@@ -55,21 +69,24 @@ func TestPieceBuffer(t *testing.T) {
 		}
 		expectedRemainingBuffer = []byte("56789")
 
-		pieces = pb.CreatePieces([]byte("123456789"))
+		pieces, err = pb.CreatePieces(strings.NewReader("123456789"))
+		if err != nil {
+			t.Fatalf("Unexpected error: %s", err)
+		}
 
 		if reflect.DeepEqual(pieces, expectedPieces) == false {
 			t.Fatalf("Expected piece hashes %v, got %v", expectedPieces, pieces)
 		}
 
-		if bytes.Equal(pb.buf, expectedRemainingBuffer) == false {
-			t.Fatalf("Expected remaining buffer '%s', got '%s'", expectedRemainingBuffer, pb.buf)
+		if bytes.Equal(pb.buf.Bytes(), expectedRemainingBuffer) == false {
+			t.Fatalf("Expected remaining buffer '%s', got '%s'", expectedRemainingBuffer, pb.buf.Bytes())
 		}
 	})
 
 	t.Run("Flush should return last piece and clear itself", func(t *testing.T) {
-		pb := NewPieceBuffer(3)
+		pb := NewMemoryPieceBuffer(3)
 
-		pb.CreatePieces([]byte("12345"))
+		pb.CreatePieces(bytes.NewReader([]byte("12345")))
 		lastPiece := pb.Flush()
 
 		expectedHash := Sha1Hash(sha1.Sum([]byte("45")))
@@ -77,8 +94,8 @@ func TestPieceBuffer(t *testing.T) {
 			t.Fatalf("Expected last piece hash to be %v, got %v", expectedHash, lastPiece)
 		}
 
-		if len(pb.buf) != 0 {
-			t.Fatalf("Expected buf lenght to be %d, got %d", 0, len(pb.buf))
+		if pb.buf.Len() != 0 {
+			t.Fatalf("Expected buf lenght to be %d, got %d", 0, pb.buf.Len())
 		}
 
 		lastPiece = pb.Flush()
@@ -89,12 +106,13 @@ func TestPieceBuffer(t *testing.T) {
 	})
 
 	t.Run("Empty should indicate when the internal buffer is empty", func(t *testing.T) {
-		pb := NewPieceBuffer(2)
+		pb := NewMemoryPieceBuffer(2)
 
 		if pb.Empty() != true {
 			t.Fatalf("A new PieceBuffer must be empty")
 		}
-		pb.buf = []byte("a")
+		n, e := pb.buf.Write([]byte("a"))
+		fmt.Println(n, e)
 		if pb.Empty() != false {
 			t.Fatalf("Expected Empty() to return false, got true")
 		}
@@ -103,6 +121,16 @@ func TestPieceBuffer(t *testing.T) {
 
 		if pb.Empty() != true {
 			t.Fatalf("Expected Empty() to return true, got false")
+		}
+	})
+
+	t.Run("CreatePieces should return read errors", func(t *testing.T) {
+		pb := NewMemoryPieceBuffer(2)
+
+		brokenReader := &brokenReaderT{}
+		_, err := pb.CreatePieces(brokenReader)
+		if err != errBrokenReader {
+			t.Fatalf("Expected error %s, got %s", errBrokenReader, err)
 		}
 	})
 }
