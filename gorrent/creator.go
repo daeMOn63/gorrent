@@ -27,9 +27,9 @@ func NewCreator(pb PieceBuffer, filesystem fs.FileSystem) *Creator {
 }
 
 // Create return a new gorrent from files under rootDir and given pieceLength
-func (c *Creator) Create(rootDir string) (*Gorrent, error) {
+func (c *Creator) Create(rootDir string, maxWorkers int) (*Gorrent, error) {
 
-	filepaths, err := c.filesystem.FindFiles(rootDir)
+	filepaths, err := c.filesystem.FindFiles(rootDir, maxWorkers)
 	if err != nil {
 		return nil, err
 	}

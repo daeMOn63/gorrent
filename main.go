@@ -8,14 +8,14 @@ import (
 
 func main() {
 
-	src := "/home/flavien/workspace/sigrok"
-	out := "./sigrok.gorrent"
+	src := "test/sample1/data"
+	out := "test/sample1/expected.gorrent"
 
-	pb := gorrent.NewMemoryPieceBuffer(gorrent.DefaultPieceLength)
-	filesystem, _ := fs.NewDiskFS(10)
+	pb := gorrent.NewMemoryPieceBuffer(1024)
+	filesystem := fs.NewFileSystem()
 	creator := gorrent.NewCreator(pb, filesystem)
 
-	g, err := creator.Create(src)
+	g, err := creator.Create(src, 10)
 	if err != nil {
 		panic(err)
 	}

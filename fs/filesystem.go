@@ -9,35 +9,36 @@ import (
 
 // FileSystem allow interactions with the file system
 type FileSystem interface {
-	FindFiles(string) ([]string, error)
-	Open(string) (File, error)
-	Create(string) (File, error)
+	FindFiles(rootPath string, maxWorkers int) (filepaths []string, err error)
+	Open(path string) (File, error)
+	Create(path string) (File, error)
 }
 
-// DiskFS is a FileSystem reading from disk
-type DiskFS struct {
+// diskFS is a FileSystem reading from disk
+type diskFS struct {
 	tokens chan struct{}
 }
 
-var _ FileSystem = &DiskFS{}
+var _ FileSystem = &diskFS{}
 
-// NewDiskFS create a new DiskFS, spawning at max numWorkers goroutine
-func NewDiskFS(numWorkers int) (*DiskFS, error) {
-	if numWorkers <= 0 {
-		return nil, errors.New("numWorkers must be greater than 0")
-	}
-
-	return &DiskFS{
-		tokens: make(chan struct{}, numWorkers),
-	}, nil
+// NewFileSystem create a new diskFS, spawning at max numWorkers goroutine
+func NewFileSystem() FileSystem {
+	return &diskFS{}
 }
 
 // FindFiles return all file paths recursively under given path
-// or path if it is not a directory
-func (dfs *DiskFS) FindFiles(path string) ([]string, error) {
+// or path if it is not a directory. maxWorkers can be used to control the
+// maximum number of goroutine, to avoid too many open files errors
+func (dfs *diskFS) FindFiles(path string, maxWorkers int) ([]string, error) {
+	if maxWorkers <= 0 {
+		return nil, errors.New("maxWorkers must be greater than 0")
+	}
+
 	ch := make(chan getFileOutput)
 
-	go dfs.getFiles(path, ch)
+	tokens := make(chan struct{}, maxWorkers)
+
+	go dfs.getFiles(path, tokens, ch)
 	var files []string
 
 	childs := 1
@@ -59,7 +60,7 @@ func (dfs *DiskFS) FindFiles(path string) ([]string, error) {
 }
 
 // Open returns a File from given path
-func (dfs *DiskFS) Open(path string) (File, error) {
+func (dfs *diskFS) Open(path string) (File, error) {
 	file, err := os.Open(path)
 	if err != nil {
 		return nil, err
@@ -78,7 +79,7 @@ func (dfs *DiskFS) Open(path string) (File, error) {
 }
 
 // Create create a new file
-func (dfs *DiskFS) Create(path string) (File, error) {
+func (dfs *diskFS) Create(path string) (File, error) {
 	f, err := os.Create(path)
 	if err != nil {
 		return nil, err
@@ -102,9 +103,9 @@ type getFileOutput struct {
 	childs int
 }
 
-func (dfs *DiskFS) getFiles(path string, ch chan getFileOutput) {
-	dfs.tokens <- struct{}{}
-	defer func() { <-dfs.tokens }()
+func (dfs *diskFS) getFiles(path string, tokens chan struct{}, ch chan getFileOutput) {
+	tokens <- struct{}{}
+	defer func() { <-tokens }()
 
 	root, err := os.Open(path)
 	if err != nil {
@@ -134,6 +135,6 @@ func (dfs *DiskFS) getFiles(path string, ch chan getFileOutput) {
 
 	for _, finfo := range finfos {
 		p := filepath.Join(path, finfo.Name())
-		go dfs.getFiles(p, ch)
+		go dfs.getFiles(p, tokens, ch)
 	}
 }
