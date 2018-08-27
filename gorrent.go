@@ -1,47 +1,27 @@
 package main
 
 import (
+	"flag"
 	"fmt"
-	"gorrent/fs"
-	"gorrent/gorrent"
+	"gorrent/cmd"
+	"os"
 )
 
 func main() {
 
-	src := "test/sample1/data"
-	out := "test/sample1/expected.gorrent"
+	create := cmd.NewCreate()
+	create.Flags()
 
-	pb := gorrent.NewMemoryPieceBuffer(1024)
-	filesystem := fs.NewFileSystem()
-	creator := gorrent.NewCreator(pb, filesystem)
+	flag.Parse()
 
-	g, err := creator.Create(src, 10)
+	err := create.Run(os.Stdout, os.Stdin)
 	if err != nil {
-		panic(err)
+		fmt.Printf("error:\n\t%s.\n", err)
+
+		if _, ok := err.(cmd.ErrRequiredFlag); ok {
+			fmt.Println()
+			flag.Usage()
+		}
+		os.Exit(1)
 	}
-
-	var totalSize int64
-	for _, f := range g.Files {
-		totalSize += f.Length
-	}
-
-	fmt.Println("totalSize: ", totalSize)
-
-	expectedPieces := int(totalSize / int64(g.PieceLength))
-	if totalSize%int64(g.PieceLength) != 0 {
-		expectedPieces++
-	}
-
-	fmt.Println("Pieces:", len(g.Pieces), "ExpectedPieces:", expectedPieces)
-
-	if err := creator.Save(out, g); err != nil {
-		panic(err)
-	}
-	fmt.Println("saved")
-
-	newG, err := creator.Open(out)
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println(newG.PieceLength, len(newG.Files), len(newG.Pieces), err)
 }

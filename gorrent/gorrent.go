@@ -28,3 +28,14 @@ type File struct {
 
 // Sha1Hash is an alias for sha1 hashes
 type Sha1Hash [sha1.Size]byte
+
+// TotalFileSize return the summed size of all files in this gorrent
+func (g *Gorrent) TotalFileSize() int64 {
+	var t int64
+
+	for _, f := range g.Files {
+		t += f.Length
+	}
+
+	return t
+}
