@@ -1,7 +1,6 @@
 package fs
 
 import (
-	"io"
 	"os"
 )
 
@@ -9,7 +8,6 @@ import (
 type File interface {
 	Path() string
 	Size() int64
-	Reader() io.Reader
 	Read([]byte) (int, error)
 	Write([]byte) (int, error)
 	Close() error
@@ -33,10 +31,6 @@ func (f fsFile) Size() int64 {
 
 func (f fsFile) Read(p []byte) (int, error) {
 	return f.osf.Read(p)
-}
-
-func (f fsFile) Reader() io.Reader {
-	return f.osf
 }
 
 func (f fsFile) Write(p []byte) (int, error) {

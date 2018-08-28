@@ -46,8 +46,8 @@ func (c *Creator) Create(rootDir string, maxWorkers int) (*Gorrent, error) {
 		}
 
 		hash := sha1.New()
-		var buf bytes.Buffer
-		tee := io.TeeReader(fsFile, &buf)
+		buf := bytes.NewBuffer(nil)
+		tee := io.TeeReader(fsFile, buf)
 		_, err = io.Copy(hash, tee)
 		if err != nil {
 			return nil, err
@@ -62,7 +62,7 @@ func (c *Creator) Create(rootDir string, maxWorkers int) (*Gorrent, error) {
 			Hash:   sha1Hash,
 		})
 
-		newPieces, err := c.pieceBuffer.CreatePieces(&buf)
+		newPieces, err := c.pieceBuffer.CreatePieces(buf)
 		if err != nil {
 			return nil, err
 		}
