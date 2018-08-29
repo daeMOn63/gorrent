@@ -1,10 +1,11 @@
-package gorrent
+package buffer
 
 import (
 	"bytes"
 	"crypto/sha1"
 	"errors"
 	"fmt"
+	"gorrent/gorrent"
 	"reflect"
 	"strings"
 	"testing"
@@ -44,7 +45,7 @@ func TestMemoryPieceBuffer(t *testing.T) {
 		pb := NewMemoryPieceBuffer(10)
 		data := []byte("abcdefghijlkmnopqrstuvwxyz")
 
-		expectedPieces := []Sha1Hash{
+		expectedPieces := []gorrent.Sha1Hash{
 			sha1.Sum([]byte("abcdefghij")),
 			sha1.Sum([]byte("lkmnopqrst")),
 		}
@@ -64,7 +65,7 @@ func TestMemoryPieceBuffer(t *testing.T) {
 			t.Fatalf("Expected remaining buffer '%s', got '%s'", expectedRemainingBuffer, pb.buf.Bytes())
 		}
 
-		expectedPieces = []Sha1Hash{
+		expectedPieces = []gorrent.Sha1Hash{
 			sha1.Sum([]byte("uvwxyz1234")),
 		}
 		expectedRemainingBuffer = []byte("56789")
@@ -89,7 +90,7 @@ func TestMemoryPieceBuffer(t *testing.T) {
 		pb.CreatePieces(bytes.NewReader([]byte("12345")))
 		lastPiece := pb.Flush()
 
-		expectedHash := Sha1Hash(sha1.Sum([]byte("45")))
+		expectedHash := gorrent.Sha1Hash(sha1.Sum([]byte("45")))
 		if lastPiece != expectedHash {
 			t.Fatalf("Expected last piece hash to be %v, got %v", expectedHash, lastPiece)
 		}
@@ -99,7 +100,7 @@ func TestMemoryPieceBuffer(t *testing.T) {
 		}
 
 		lastPiece = pb.Flush()
-		expectedHash = Sha1Hash(sha1.Sum([]byte{}))
+		expectedHash = gorrent.Sha1Hash(sha1.Sum([]byte{}))
 		if lastPiece != expectedHash {
 			t.Fatalf("Expected hash %v, got %v", expectedHash, lastPiece)
 		}

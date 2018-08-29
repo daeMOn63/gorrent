@@ -1,4 +1,4 @@
-package gorrent
+package creator
 
 import (
 	"bytes"
@@ -9,17 +9,19 @@ import (
 	"path/filepath"
 	"time"
 
+	"gorrent/buffer"
 	"gorrent/fs"
+	"gorrent/gorrent"
 )
 
 // Creator allow to create Gorrent
 type Creator struct {
-	pieceBuffer PieceBuffer
+	pieceBuffer buffer.PieceBuffer
 	filesystem  fs.FileSystem
 }
 
 // NewCreator create a new Gorrent Creator
-func NewCreator(pb PieceBuffer, filesystem fs.FileSystem) *Creator {
+func NewCreator(pb buffer.PieceBuffer, filesystem fs.FileSystem) *Creator {
 	return &Creator{
 		pieceBuffer: pb,
 		filesystem:  filesystem,
@@ -27,14 +29,14 @@ func NewCreator(pb PieceBuffer, filesystem fs.FileSystem) *Creator {
 }
 
 // Create return a new gorrent from files under rootDir and given pieceLength
-func (c *Creator) Create(rootDir string, maxWorkers int) (*Gorrent, error) {
+func (c *Creator) Create(rootDir string, maxWorkers int) (*gorrent.Gorrent, error) {
 
 	filepaths, err := c.filesystem.FindFiles(rootDir, maxWorkers)
 	if err != nil {
 		return nil, err
 	}
 
-	g := &Gorrent{
+	g := &gorrent.Gorrent{
 		PieceLength:  c.pieceBuffer.PieceLength(),
 		CreationDate: time.Now(),
 	}
@@ -53,10 +55,10 @@ func (c *Creator) Create(rootDir string, maxWorkers int) (*Gorrent, error) {
 			return nil, err
 		}
 
-		var sha1Hash Sha1Hash
+		var sha1Hash gorrent.Sha1Hash
 		copy(sha1Hash[:], hash.Sum(nil))
 
-		g.Files = append(g.Files, File{
+		g.Files = append(g.Files, gorrent.File{
 			Name:   fsFile.Path(),
 			Length: fsFile.Size(),
 			Hash:   sha1Hash,
@@ -81,7 +83,7 @@ func (c *Creator) Create(rootDir string, maxWorkers int) (*Gorrent, error) {
 }
 
 // Save write given gorrent to dst file
-func (c *Creator) Save(dst string, g *Gorrent) error {
+func (c *Creator) Save(dst string, g *gorrent.Gorrent) error {
 	f, err := c.filesystem.Create(dst)
 	if err != nil {
 		return err
@@ -91,13 +93,13 @@ func (c *Creator) Save(dst string, g *Gorrent) error {
 	gzwriter := gzip.NewWriter(f)
 	defer gzwriter.Close()
 
-	gob.Register(Gorrent{})
+	gob.Register(gorrent.Gorrent{})
 	encoder := gob.NewEncoder(gzwriter)
 	return encoder.Encode(g)
 }
 
 // Open load gorrent from src file and returns it
-func (c *Creator) Open(src string) (*Gorrent, error) {
+func (c *Creator) Open(src string) (*gorrent.Gorrent, error) {
 	f, err := c.filesystem.Open(src)
 	if err != nil {
 		return nil, err
@@ -110,10 +112,10 @@ func (c *Creator) Open(src string) (*Gorrent, error) {
 	}
 	defer gzreader.Close()
 
-	gob.Register(Gorrent{})
+	gob.Register(gorrent.Gorrent{})
 	decoder := gob.NewDecoder(gzreader)
 
-	g := &Gorrent{}
+	g := &gorrent.Gorrent{}
 	err = decoder.Decode(g)
 	if err != nil {
 		return nil, err

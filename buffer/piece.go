@@ -1,16 +1,17 @@
-package gorrent
+package buffer
 
 import (
 	"bufio"
+	"gorrent/gorrent"
 	"io"
 )
 
 // PieceBuffer is an interface for pieceBuffer
 type PieceBuffer interface {
 	PieceLength() int
-	CreatePieces(io.Reader) ([]Sha1Hash, error)
+	CreatePieces(io.Reader) ([]gorrent.Sha1Hash, error)
 	Empty() bool
-	Flush() Sha1Hash
+	Flush() gorrent.Sha1Hash
 }
 
 // MemoryPieceBuffer is a struct allowing to create Pieces from bytes using only memory as storage
@@ -36,8 +37,8 @@ func (pb *MemoryPieceBuffer) PieceLength() int {
 }
 
 // CreatePieces create as much pieces as possible (from pieceLength) and leave remaining bytes in internal buffer
-func (pb *MemoryPieceBuffer) CreatePieces(r io.Reader) ([]Sha1Hash, error) {
-	var newPieces []Sha1Hash
+func (pb *MemoryPieceBuffer) CreatePieces(r io.Reader) ([]gorrent.Sha1Hash, error) {
+	var newPieces []gorrent.Sha1Hash
 
 	br := bufio.NewReader(r)
 
@@ -72,9 +73,9 @@ func (pb *MemoryPieceBuffer) Empty() bool {
 
 // Flush return a sha1 hash of the current buffer and reset it.
 // It returns an error when Flush is called when internal buffer is empty.
-func (pb *MemoryPieceBuffer) Flush() Sha1Hash {
+func (pb *MemoryPieceBuffer) Flush() gorrent.Sha1Hash {
 	hash := pb.buf.Sha1()
 	pb.buf.Reset()
 
-	return Sha1Hash(hash)
+	return gorrent.Sha1Hash(hash)
 }

@@ -6,6 +6,8 @@ import (
 	"io"
 	"time"
 
+	"gorrent/buffer"
+	"gorrent/creator"
 	"gorrent/fs"
 	"gorrent/gorrent"
 )
@@ -44,9 +46,9 @@ func (c *Create) Run(w io.Writer, r io.Reader) error {
 		return ErrRequiredFlag{Name: "dst"}
 	}
 
-	pb := gorrent.NewMemoryPieceBuffer(c.pieceLength)
+	pb := buffer.NewMemoryPieceBuffer(c.pieceLength)
 	filesystem := fs.NewFileSystem()
-	creator := gorrent.NewCreator(pb, filesystem)
+	creator := creator.NewCreator(pb, filesystem)
 
 	fmt.Fprintf(w, "creating new gorrent:\n")
 	fmt.Fprintf(w, "\t - from: %s\n", c.src)

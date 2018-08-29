@@ -1,4 +1,4 @@
-package gorrent
+package creator
 
 import (
 	"bytes"
@@ -6,7 +6,9 @@ import (
 	"crypto/sha1"
 	"encoding/gob"
 	"errors"
+	"gorrent/buffer"
 	"gorrent/fs"
+	"gorrent/gorrent"
 	"io"
 	"path/filepath"
 	"reflect"
@@ -75,7 +77,7 @@ func (f *DummyFile) Close() error {
 
 func TestCreator(t *testing.T) {
 	expectedPieceLength := 4
-	pieceBuffer := NewMemoryPieceBuffer(expectedPieceLength)
+	pieceBuffer := buffer.NewMemoryPieceBuffer(expectedPieceLength)
 
 	expectedFiles := []string{"fileA", "child/fileB", "kittens.jpg"}
 	expectedSourcePath := "some-dir/source"
@@ -186,12 +188,12 @@ func TestCreator(t *testing.T) {
 
 	t.Run("Save should properly save gorrent", func(t *testing.T) {
 
-		g := &Gorrent{}
+		g := &gorrent.Gorrent{}
 
 		expectedBytes := bytes.NewBuffer(nil)
 
 		gzwriter := gzip.NewWriter(expectedBytes)
-		gob.Register(Gorrent{})
+		gob.Register(gorrent.Gorrent{})
 		encoder := gob.NewEncoder(gzwriter)
 		encoder.Encode(g)
 		gzwriter.Close()
@@ -226,7 +228,7 @@ func TestCreator(t *testing.T) {
 			return nil, expectedErr
 		}
 
-		g := &Gorrent{}
+		g := &gorrent.Gorrent{}
 
 		creator := NewCreator(pieceBuffer, filesystem)
 		err := creator.Save(expectedTargetFile, g)
@@ -238,12 +240,12 @@ func TestCreator(t *testing.T) {
 
 	t.Run("Open should properly open gorrent", func(t *testing.T) {
 
-		expectedGorrent := &Gorrent{}
+		expectedGorrent := &gorrent.Gorrent{}
 
 		expectedBytes := bytes.NewBuffer(nil)
 
 		gzwriter := gzip.NewWriter(expectedBytes)
-		gob.Register(Gorrent{})
+		gob.Register(gorrent.Gorrent{})
 		encoder := gob.NewEncoder(gzwriter)
 		encoder.Encode(expectedGorrent)
 		gzwriter.Close()

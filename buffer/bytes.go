@@ -1,4 +1,4 @@
-package gorrent
+package buffer
 
 import (
 	"bytes"
