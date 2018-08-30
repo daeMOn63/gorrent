@@ -2,8 +2,9 @@ package buffer
 
 import (
 	"bufio"
-	"gorrent/gorrent"
 	"io"
+
+	"github.com/daeMOn63/gorrent/gorrent"
 )
 
 // PieceBuffer is an interface for pieceBuffer

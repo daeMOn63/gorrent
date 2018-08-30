@@ -5,10 +5,11 @@ import (
 	"crypto/sha1"
 	"errors"
 	"fmt"
-	"gorrent/gorrent"
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/daeMOn63/gorrent/gorrent"
 )
 
 var errBrokenReader = errors.New("readerror :)")

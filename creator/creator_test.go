@@ -6,14 +6,15 @@ import (
 	"crypto/sha1"
 	"encoding/gob"
 	"errors"
-	"gorrent/buffer"
-	"gorrent/fs"
-	"gorrent/gorrent"
 	"io"
 	"path/filepath"
 	"reflect"
 	"testing"
 	"time"
+
+	"github.com/daeMOn63/gorrent/buffer"
+	"github.com/daeMOn63/gorrent/fs"
+	"github.com/daeMOn63/gorrent/gorrent"
 )
 
 type DummyFS struct {

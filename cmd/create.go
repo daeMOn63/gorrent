@@ -6,10 +6,10 @@ import (
 	"io"
 	"time"
 
-	"gorrent/buffer"
-	"gorrent/creator"
-	"gorrent/fs"
-	"gorrent/gorrent"
+	"github.com/daeMOn63/gorrent/buffer"
+	"github.com/daeMOn63/gorrent/creator"
+	"github.com/daeMOn63/gorrent/fs"
+	"github.com/daeMOn63/gorrent/gorrent"
 )
 
 // Create is a cli command, allowing to create gorrent
@@ -18,24 +18,33 @@ type Create struct {
 	src         string
 	dst         string
 	fsWorkers   int
+
+	flagSet *flag.FlagSet
 }
 
 var _ Command = &Create{}
 
-// NewCreate instantiate the command
+// NewCreate instantiates the command
 func NewCreate() Command {
-	return &Create{}
+
+	cmd := &Create{
+		flagSet: flag.NewFlagSet("create", flag.ExitOnError),
+	}
+
+	cmd.flagSet.StringVar(&cmd.src, "src", "", "Required. File / folder to create the gorrent from.")
+	cmd.flagSet.StringVar(&cmd.dst, "dst", fmt.Sprintf("./%d.gorrent", time.Now().Unix()), "Output filename")
+	cmd.flagSet.IntVar(&cmd.pieceLength, "pieceLength", gorrent.DefaultPieceLength, "Gorrent pieces length.")
+	cmd.flagSet.IntVar(&cmd.fsWorkers, "fsWorkers", 10, "Number of parallel workers when accessing file system")
+
+	return cmd
 }
 
-// Flags set cli flags for the create command. You still need to call flag.Parse() when ready.
-func (c *Create) Flags() {
-	flag.StringVar(&c.src, "src", "", "Required. File / folder to create the gorrent from.")
-	flag.StringVar(&c.dst, "dst", fmt.Sprintf("./%d.gorrent", time.Now().Unix()), "Output filename")
-	flag.IntVar(&c.pieceLength, "pieceLength", gorrent.DefaultPieceLength, "Gorrent pieces length.")
-	flag.IntVar(&c.fsWorkers, "fsWorkers", 10, "Number of parallel workers when accessing file system")
+// FlagSet returns command flags
+func (c *Create) FlagSet() *flag.FlagSet {
+	return c.flagSet
 }
 
-// Run execute the command
+// Run executes the command
 func (c *Create) Run(w io.Writer, r io.Reader) error {
 
 	if c.src == "" {

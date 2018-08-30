@@ -9,9 +9,9 @@ import (
 	"path/filepath"
 	"time"
 
-	"gorrent/buffer"
-	"gorrent/fs"
-	"gorrent/gorrent"
+	"github.com/daeMOn63/gorrent/buffer"
+	"github.com/daeMOn63/gorrent/fs"
+	"github.com/daeMOn63/gorrent/gorrent"
 )
 
 // Creator allow to create Gorrent
