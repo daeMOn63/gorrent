@@ -7,6 +7,7 @@ import (
 	"encoding/gob"
 	"io"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/daeMOn63/gorrent/buffer"
@@ -64,7 +65,7 @@ func (c *Creator) Create(rootDir string, maxWorkers int) (*gorrent.Gorrent, erro
 		}
 
 		g.Files = append(g.Files, gorrent.File{
-			Name:   file.Name(),
+			Name:   strings.Replace(file.Name(), rootDir, "", 1),
 			Length: finfo.Size(),
 			Hash:   sha1Hash,
 		})

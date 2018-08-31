@@ -6,7 +6,6 @@ import (
 	"crypto/sha1"
 	"encoding/gob"
 	"errors"
-	"path/filepath"
 	"reflect"
 	"testing"
 	"time"
@@ -20,7 +19,7 @@ func TestCreator(t *testing.T) {
 	expectedPieceLength := 4
 	pieceBuffer := buffer.NewMemoryPieceBuffer(expectedPieceLength)
 
-	expectedFiles := []string{"fileA", "child/fileB", "kittens.jpg"}
+	expectedFiles := []string{"/fileA", "/child/fileB", "/kittens.jpg"}
 	expectedSourcePath := "some-dir/source"
 	expectedMaxWorkers := 5
 	expectedFileContent := []byte("aaaaaaaaaa")
@@ -66,7 +65,7 @@ func TestCreator(t *testing.T) {
 		}
 
 		for i, f := range g.Files {
-			expectedFile := filepath.Join(expectedSourcePath, expectedFiles[i])
+			expectedFile := expectedFiles[i]
 			if f.Name != expectedFile {
 				t.Fatalf("Expected filename to be %s, got %s", expectedFile, f.Name)
 			}
