@@ -7,7 +7,7 @@ help: ## This help.
 build: ## Build the binary
 	go build -o build/gorrent main.go
 
-.PHONY: create
+.PHONY: test
 test: ## Run tests
 	go test -coverprofile=/tmp/go-code-cover -timeout 30s  ./...
 
