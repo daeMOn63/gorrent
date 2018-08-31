@@ -42,14 +42,14 @@ func (c *Creator) Create(rootDir string, maxWorkers int) (*gorrent.Gorrent, erro
 	}
 
 	for _, path := range filepaths {
-		fsFile, err := c.filesystem.Open(filepath.Join(rootDir, path))
+		file, err := c.filesystem.Open(filepath.Join(rootDir, path))
 		if err != nil {
 			return nil, err
 		}
 
 		hash := sha1.New()
 		buf := bytes.NewBuffer(nil)
-		tee := io.TeeReader(fsFile, buf)
+		tee := io.TeeReader(file, buf)
 		_, err = io.Copy(hash, tee)
 		if err != nil {
 			return nil, err
@@ -58,9 +58,14 @@ func (c *Creator) Create(rootDir string, maxWorkers int) (*gorrent.Gorrent, erro
 		var sha1Hash gorrent.Sha1Hash
 		copy(sha1Hash[:], hash.Sum(nil))
 
+		finfo, err := file.Stat()
+		if err != nil {
+			return nil, err
+		}
+
 		g.Files = append(g.Files, gorrent.File{
-			Name:   fsFile.Path(),
-			Length: fsFile.Size(),
+			Name:   file.Name(),
+			Length: finfo.Size(),
 			Hash:   sha1Hash,
 		})
 
@@ -71,7 +76,7 @@ func (c *Creator) Create(rootDir string, maxWorkers int) (*gorrent.Gorrent, erro
 
 		g.Pieces = append(g.Pieces, newPieces...)
 
-		fsFile.Close()
+		file.Close()
 	}
 
 	if !c.pieceBuffer.Empty() {

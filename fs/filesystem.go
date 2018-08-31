@@ -59,42 +59,14 @@ func (dfs *diskFS) FindFiles(path string, maxWorkers int) ([]string, error) {
 	return files, nil
 }
 
-// Open returns a File from given path
+// Open returns a File from given path by wrapping around os.Open
 func (dfs *diskFS) Open(path string) (File, error) {
-	file, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-
-	finfo, err := file.Stat()
-	if err != nil {
-		return nil, err
-	}
-
-	return &fsFile{
-		path: path,
-		osf:  file,
-		osfi: finfo,
-	}, nil
+	return os.Open(path)
 }
 
-// Create create a new file
+// Create create a new file by wrapping around os.Create
 func (dfs *diskFS) Create(path string) (File, error) {
-	f, err := os.Create(path)
-	if err != nil {
-		return nil, err
-	}
-
-	info, err := f.Stat()
-	if err != nil {
-		return nil, err
-	}
-
-	return &fsFile{
-		path: path,
-		osf:  f,
-		osfi: info,
-	}, nil
+	return os.Create(path)
 }
 
 type getFileOutput struct {
@@ -137,4 +109,26 @@ func (dfs *diskFS) getFiles(path string, tokens chan struct{}, ch chan getFileOu
 		p := filepath.Join(path, finfo.Name())
 		go dfs.getFiles(p, tokens, ch)
 	}
+}
+
+// DummyFS implements FileSystem but allow to configure its behavior
+type DummyFS struct {
+	FindFilesFunc func(string, int) ([]string, error)
+	OpenFunc      func(string) (File, error)
+	CreateFunc    func(string) (File, error)
+}
+
+// FindFiles calls FindFilesFunc
+func (filesystem *DummyFS) FindFiles(rootPath string, maxWorkers int) (filepaths []string, err error) {
+	return filesystem.FindFilesFunc(rootPath, maxWorkers)
+}
+
+// Open calls OpenFunc
+func (filesystem *DummyFS) Open(path string) (File, error) {
+	return filesystem.OpenFunc(path)
+}
+
+// Create calls CreateFunc
+func (filesystem *DummyFS) Create(path string) (File, error) {
+	return filesystem.CreateFunc(path)
 }

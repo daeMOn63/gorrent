@@ -6,7 +6,6 @@ import (
 	"crypto/sha1"
 	"encoding/gob"
 	"errors"
-	"io"
 	"path/filepath"
 	"reflect"
 	"testing"
@@ -16,65 +15,6 @@ import (
 	"github.com/daeMOn63/gorrent/fs"
 	"github.com/daeMOn63/gorrent/gorrent"
 )
-
-type DummyFS struct {
-	FindFilesFunc func(string, int) ([]string, error)
-	OpenFunc      func(string) (fs.File, error)
-	CreateFunc    func(string) (fs.File, error)
-}
-
-func (filesystem *DummyFS) FindFiles(rootPath string, maxWorkers int) (filepaths []string, err error) {
-	return filesystem.FindFilesFunc(rootPath, maxWorkers)
-}
-func (filesystem *DummyFS) Open(path string) (fs.File, error) {
-	return filesystem.OpenFunc(path)
-}
-
-func (filesystem *DummyFS) Create(path string) (fs.File, error) {
-	return filesystem.CreateFunc(path)
-}
-
-type DummyFile struct {
-	PathVal    string
-	Content    []byte
-	CurReadPtr int
-	ReadFunc   func([]byte) (int, error)
-	WriteFunc  func([]byte) (int, error)
-	CloseErr   error
-}
-
-func (f *DummyFile) Path() string {
-	return f.PathVal
-}
-
-func (f *DummyFile) Size() int64 {
-	return int64(len(f.Content))
-}
-
-func (f *DummyFile) Read(p []byte) (int, error) {
-	if f.CurReadPtr >= len(f.Content) {
-		return 0, io.EOF
-	}
-
-	maxRead := len(p)
-	if maxRead > len(f.Content[f.CurReadPtr:]) {
-		maxRead = len(f.Content[f.CurReadPtr:])
-	}
-
-	len := maxRead - f.CurReadPtr
-	copy(p, f.Content[f.CurReadPtr:maxRead])
-	f.CurReadPtr += len
-	return len, nil
-}
-
-func (f *DummyFile) Write(p []byte) (int, error) {
-	f.Content = append(f.Content, p...)
-	return len(p), nil
-}
-
-func (f *DummyFile) Close() error {
-	return f.CloseErr
-}
 
 func TestCreator(t *testing.T) {
 	expectedPieceLength := 4
@@ -86,12 +26,15 @@ func TestCreator(t *testing.T) {
 	expectedFileContent := []byte("aaaaaaaaaa")
 	expectedTargetFile := "target/file.gorrent"
 
-	filesystem := &DummyFS{}
+	filesystem := &fs.DummyFS{}
 
 	properOpenFunc := func(path string) (fs.File, error) {
-		d := &DummyFile{
-			PathVal: path,
+		d := &fs.DummyFile{
+			NameVal: path,
 			Content: expectedFileContent,
+			StatVal: &fs.DummyFileInfo{
+				SizeVal: int64(len(expectedFileContent)),
+			},
 		}
 
 		return d, nil
@@ -152,6 +95,33 @@ func TestCreator(t *testing.T) {
 		}
 	})
 
+	t.Run("Create should handle Stat errors properly", func(t *testing.T) {
+		expectedError := errors.New("staterr-string")
+
+		filesystem.FindFilesFunc = properFindFilesFunc
+		filesystem.OpenFunc = func(path string) (fs.File, error) {
+			d := &fs.DummyFile{
+				NameVal: path,
+				Content: expectedFileContent,
+				StatErr: expectedError,
+			}
+
+			return d, nil
+		}
+
+		creator := NewCreator(pieceBuffer, filesystem)
+
+		g, err := creator.Create(expectedSourcePath, expectedMaxWorkers)
+		if g != nil {
+			t.Fatalf("Expected gorrent to be nil")
+		}
+
+		if err != expectedError {
+			t.Fatalf("Expected err to be %s, got %s", expectedError, err)
+		}
+
+	})
+
 	t.Run("Create should handle FindFiles errors properly", func(t *testing.T) {
 		expectedErr := errors.New("findfiles errstring")
 		filesystem.FindFilesFunc = func(path string, maxWorkers int) ([]string, error) {
@@ -199,14 +169,12 @@ func TestCreator(t *testing.T) {
 		encoder.Encode(g)
 		gzwriter.Close()
 
-		d := &DummyFile{}
+		d := &fs.DummyFile{}
 
 		filesystem.CreateFunc = func(path string) (fs.File, error) {
 			if path != expectedTargetFile {
 				t.Fatalf("Expected path to be %s, got %s", expectedTargetFile, path)
 			}
-
-			d.PathVal = path
 
 			return d, nil
 		}
@@ -251,14 +219,13 @@ func TestCreator(t *testing.T) {
 		encoder.Encode(expectedGorrent)
 		gzwriter.Close()
 
-		d := &DummyFile{}
+		d := &fs.DummyFile{}
 
 		filesystem.OpenFunc = func(path string) (fs.File, error) {
 			if path != expectedTargetFile {
 				t.Fatalf("Expected path to be %s, got %s", expectedTargetFile, path)
 			}
 
-			d.PathVal = path
 			d.Content = expectedBytes.Bytes()
 
 			return d, nil
