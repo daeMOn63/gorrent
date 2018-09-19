@@ -15,7 +15,7 @@ type ByteBuffer struct {
 func NewByteBuffer(b []byte) *ByteBuffer {
 	return &ByteBuffer{
 		buffer: bytes.NewBuffer(b),
-		len:    0,
+		len:    len(b),
 	}
 }
 
