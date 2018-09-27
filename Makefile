@@ -11,6 +11,10 @@ build: test ## Build the binary
 test: ## Run tests
 	go test -coverprofile=/tmp/go-code-cover -timeout 30s  ./...
 
+.PHONY: cover
+cover: test ## Show coverage
+	go tool cover -html=/tmp/go-code-cover
+
 .PHONY: clean
 clean:
 	rm -rf build/

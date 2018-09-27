@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"crypto/sha1"
 	"errors"
-	"fmt"
 	"reflect"
 	"strings"
 	"testing"
@@ -113,8 +112,7 @@ func TestMemoryPieceBuffer(t *testing.T) {
 		if pb.Empty() != true {
 			t.Fatalf("A new PieceBuffer must be empty")
 		}
-		n, e := pb.buf.Write([]byte("a"))
-		fmt.Println(n, e)
+		pb.buf.Write([]byte("a"))
 		if pb.Empty() != false {
 			t.Fatalf("Expected Empty() to return false, got true")
 		}
