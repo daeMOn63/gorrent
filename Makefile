@@ -5,7 +5,7 @@ help: ## This help.
 
 .PHONY: build
 build: test ## Build the binary
-	go build -o build/gorrent main.go
+	go build -o build/gorrent gorrent.go
 
 .PHONY: test
 test: ## Run tests
