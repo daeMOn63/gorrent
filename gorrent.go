@@ -7,13 +7,13 @@ import (
 	"github.com/daeMOn63/gorrent/cmd"
 )
 
-var create, client, tracker cmd.Command
+var create, peerd, trackerd cmd.Command
 
 func main() {
 
 	create = cmd.NewCreate()
-	client = cmd.NewClient()
-	tracker = cmd.NewTracker()
+	peerd = cmd.NewPeerDaemon()
+	trackerd = cmd.NewTrackerDaemon()
 
 	if len(os.Args) < 2 {
 		usage()
@@ -22,24 +22,24 @@ func main() {
 	switch os.Args[1] {
 	case create.FlagSet().Name():
 		create.FlagSet().Parse(os.Args[2:])
-	case client.FlagSet().Name():
-		client.FlagSet().Parse(os.Args[2:])
-	case tracker.FlagSet().Name():
-		tracker.FlagSet().Parse(os.Args[2:])
+	case peerd.FlagSet().Name():
+		peerd.FlagSet().Parse(os.Args[2:])
+	case trackerd.FlagSet().Name():
+		trackerd.FlagSet().Parse(os.Args[2:])
 	default:
-		fmt.Printf("error: unknow command `%s`\n", os.Args[1])
+		fmt.Printf("error: unknown command `%s`\n", os.Args[1])
 		usage()
 	}
 
 	if create.FlagSet().Parsed() {
 		err := create.Run(os.Stdout, os.Stdin)
 		checkCmdError(create, err)
-	} else if client.FlagSet().Parsed() {
-		err := client.Run(os.Stdout, os.Stdin)
-		checkCmdError(client, err)
-	} else if tracker.FlagSet().Parsed() {
-		err := tracker.Run(os.Stdout, os.Stdin)
-		checkCmdError(tracker, err)
+	} else if peerd.FlagSet().Parsed() {
+		err := peerd.Run(os.Stdout, os.Stdin)
+		checkCmdError(peerd, err)
+	} else if trackerd.FlagSet().Parsed() {
+		err := trackerd.Run(os.Stdout, os.Stdin)
+		checkCmdError(trackerd, err)
 	}
 }
 
@@ -62,10 +62,13 @@ func usage() {
 	fmt.Printf("Available subcommands:\n\n")
 	fmt.Printf("create -src <path> [-dst <path>] [-fsWorkers <num>] [-pieceLength <num>]\n")
 	fmt.Printf("  Create a new gorrent file from a source file or directory.\n\n")
-	fmt.Printf("client -todo\n")
-	fmt.Printf("  Start a gorrent client.\n\n")
-	fmt.Printf("tracker -todo\n")
-	fmt.Printf("  Start a gorrent tracker.\n\n")
+	fmt.Printf("peerd -public-ip <string> -storage <path> [-id <string]\n")
+	fmt.Printf("      [-public-port <int>] [-sock <path>]\n")
+	fmt.Printf("      [-read-timeout <num>] [-write-timeout <num>]\n")
+	fmt.Printf("      [-db <path>]\n")
+	fmt.Printf("  Start a gorrent peer daemon.\n\n")
+	fmt.Printf("trackerd [-bind <ip>:<port>] [-read-timeout <num>] [-write-timeout <num>]\n")
+	fmt.Printf("  Start a gorrent tracker daemon.\n\n")
 	fmt.Println()
 	os.Exit(1)
 }
