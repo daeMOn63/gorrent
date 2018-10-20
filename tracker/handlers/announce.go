@@ -1,13 +1,16 @@
 package handlers
 
 import (
-	"bytes"
-	"encoding/binary"
 	"errors"
 	"log"
 
 	"github.com/daeMOn63/gorrent/tracker/actions"
 	"github.com/daeMOn63/gorrent/tracker/store"
+)
+
+var (
+	// ErrBadAction is returned when the handler receive an unexpected action
+	ErrBadAction = errors.New("given action is not a valid announce action")
 )
 
 type announce struct {
@@ -25,26 +28,26 @@ func NewAnnounce(store store.Announce) actions.Handler {
 func (h *announce) Handle(a actions.Action) ([]byte, error) {
 	announceAction, ok := a.(*actions.Announce)
 	if !ok {
-		return nil, errors.New("given action is not a valid announce action")
+		return nil, ErrBadAction
 	}
 
-	log.Printf("announce %s %#x", actions.EventNames[announceAction.Event], announceAction.InfoHash)
+	log.Printf("announce %s %#x", announceAction.Event.Name(), announceAction.InfoHash)
 
 	h.store.Save(announceAction)
 
 	peers := h.store.FindPeers(announceAction.InfoHash)
 
-	var addrs []actions.PeerAddr
+	var out []byte
 	for _, p := range peers {
 		if p.ID != announceAction.Peer.ID {
-			addrs = append(addrs, p.PeerAddr)
+			b, err := p.Bytes()
+			if err != nil {
+				return nil, err
+			}
+
+			out = append(out, b...)
 		}
 	}
 
-	buf := bytes.NewBuffer(nil)
-	if err := binary.Write(buf, binary.BigEndian, addrs); err != nil {
-		return nil, err
-	}
-
-	return buf.Bytes(), nil
+	return out, nil
 }

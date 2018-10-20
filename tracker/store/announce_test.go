@@ -1,7 +1,6 @@
 package store
 
 import (
-	"math/rand"
 	"reflect"
 	"testing"
 	"time"
@@ -10,28 +9,15 @@ import (
 	"github.com/daeMOn63/gorrent/tracker/actions"
 )
 
-func randomSha1Hash() gorrent.Sha1Hash {
-	rand.Seed(time.Now().UnixNano())
-
-	hash := make([]byte, 20)
-	rand.Read(hash)
-
-	var sha1Hash gorrent.Sha1Hash
-
-	copy(sha1Hash[:], hash)
-
-	return sha1Hash
-}
-
 func TestAnnounceMemorySave(t *testing.T) {
 	t.Run("Save append to the slice", func(t *testing.T) {
 		s := NewAnnounceMemory()
 
 		a := &actions.Announce{
 			Event:    actions.AnnounceEventStarted,
-			InfoHash: randomSha1Hash(),
+			InfoHash: gorrent.RandomSha1Hash(),
 			Peer: actions.Peer{
-				ID: actions.PeerID(randomSha1Hash()),
+				ID: actions.PeerID(gorrent.RandomSha1Hash()),
 			},
 		}
 
@@ -58,9 +44,9 @@ func TestAnnounceMemorySave(t *testing.T) {
 
 		a2 := &actions.Announce{
 			Event:    actions.AnnounceEventCompleted,
-			InfoHash: randomSha1Hash(),
+			InfoHash: gorrent.RandomSha1Hash(),
 			Peer: actions.Peer{
-				ID: actions.PeerID(randomSha1Hash()),
+				ID: actions.PeerID(gorrent.RandomSha1Hash()),
 			},
 		}
 
@@ -80,9 +66,9 @@ func TestAnnounceMemorySave(t *testing.T) {
 
 		a := &actions.Announce{
 			Event:    actions.AnnounceEventCompleted,
-			InfoHash: randomSha1Hash(),
+			InfoHash: gorrent.RandomSha1Hash(),
 			Peer: actions.Peer{
-				ID: actions.PeerID(randomSha1Hash()),
+				ID: actions.PeerID(gorrent.RandomSha1Hash()),
 			},
 		}
 
@@ -106,15 +92,15 @@ func TestAnnounceMemoryFindPeers(t *testing.T) {
 	t.Run("FindPeers returns proper peers", func(t *testing.T) {
 		s := NewAnnounceMemory()
 
-		infoHash1 := randomSha1Hash()
-		infoHash2 := randomSha1Hash()
+		infoHash1 := gorrent.RandomSha1Hash()
+		infoHash2 := gorrent.RandomSha1Hash()
 
 		expectedPeers1 := []actions.Peer{
-			{ID: actions.PeerID(randomSha1Hash())},
-			{ID: actions.PeerID(randomSha1Hash())},
+			{ID: actions.PeerID(gorrent.RandomSha1Hash())},
+			{ID: actions.PeerID(gorrent.RandomSha1Hash())},
 		}
 		expectedPeers2 := []actions.Peer{
-			{ID: actions.PeerID(randomSha1Hash())},
+			{ID: actions.PeerID(gorrent.RandomSha1Hash())},
 		}
 
 		a1 := &actions.Announce{
@@ -153,7 +139,7 @@ func TestAnnounceMemoryFindPeers(t *testing.T) {
 	t.Run("FindPeers returns no peer by default", func(t *testing.T) {
 		s := NewAnnounceMemory()
 
-		peers := s.FindPeers(randomSha1Hash())
+		peers := s.FindPeers(gorrent.RandomSha1Hash())
 		if len(peers) != 0 {
 			t.Fatalf("Expected peers len to be 0, got %d", len(peers))
 		}
@@ -167,8 +153,8 @@ func TestDummyAnnounce(t *testing.T) {
 
 	saveCalled := false
 
-	expectedInfoHash := randomSha1Hash()
-	expectedPeerID := actions.PeerID(randomSha1Hash())
+	expectedInfoHash := gorrent.RandomSha1Hash()
+	expectedPeerID := actions.PeerID(gorrent.RandomSha1Hash())
 
 	expectedStoredAnnounce := &StoredAnnounce{
 		Announce: &actions.Announce{
@@ -178,8 +164,8 @@ func TestDummyAnnounce(t *testing.T) {
 	}
 
 	expectedPeers := []actions.Peer{
-		{ID: actions.PeerID(randomSha1Hash())},
-		{ID: actions.PeerID(randomSha1Hash())},
+		{ID: actions.PeerID(gorrent.RandomSha1Hash())},
+		{ID: actions.PeerID(gorrent.RandomSha1Hash())},
 	}
 
 	d := &DummyAnnounce{

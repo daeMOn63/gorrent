@@ -1,6 +1,8 @@
 package actions
 
 import (
+	"bytes"
+	"encoding/binary"
 	"fmt"
 
 	"github.com/daeMOn63/gorrent/gorrent"
@@ -16,8 +18,7 @@ const (
 )
 
 var (
-	// EventNames associate human readable strings to AnnounceEvent
-	EventNames = map[AnnounceEvent]string{
+	eventNamesMap = map[AnnounceEvent]string{
 		AnnounceEventStarted:   "started",
 		AnnounceEventStopped:   "stopped",
 		AnnounceEventCompleted: "completed",
@@ -27,10 +28,26 @@ var (
 // AnnounceEvent defines a custom type for announce Events
 type AnnounceEvent uint8
 
+// Name returns a human readable string naming the event
+func (e AnnounceEvent) Name() string {
+	return eventNamesMap[e]
+}
+
 // PeerAddr describes a peer address (ip and port)
 type PeerAddr struct {
 	IPAddr uint32
 	Port   uint16
+}
+
+// Bytes return the byte representation of the PeerAddr
+func (p PeerAddr) Bytes() ([]byte, error) {
+	buf := bytes.NewBuffer(nil)
+	err := binary.Write(buf, binary.BigEndian, p)
+	if err != nil {
+		return nil, err
+	}
+
+	return buf.Bytes(), nil
 }
 
 // Peer defines the peer id, and exposed ip and port

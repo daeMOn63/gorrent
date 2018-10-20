@@ -1,6 +1,8 @@
 package gorrent
 
-import "crypto/sha1"
+import (
+	"crypto/sha1"
+)
 
 // Hasher interface list methods for implementing a gorrent Hasher
 type Hasher interface {
