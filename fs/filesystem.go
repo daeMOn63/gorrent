@@ -12,6 +12,9 @@ type FileSystem interface {
 	FindFiles(rootPath string, maxWorkers int) (filepaths []string, err error)
 	Open(path string) (File, error)
 	Create(path string) (File, error)
+	Stat(path string) (os.FileInfo, error)
+	MkdirAll(path string, mode os.FileMode) error
+	Remove(path string) error
 }
 
 // diskFS is a FileSystem reading from disk
@@ -20,6 +23,7 @@ type diskFS struct {
 }
 
 var _ FileSystem = &diskFS{}
+var _ FileSystem = &DummyFS{}
 
 // NewFileSystem create a new diskFS, spawning at max numWorkers goroutine
 func NewFileSystem() FileSystem {
@@ -69,6 +73,21 @@ func (dfs *diskFS) Create(path string) (File, error) {
 	return os.Create(path)
 }
 
+// Stat wrap os.Stat
+func (dfs *diskFS) Stat(path string) (os.FileInfo, error) {
+	return os.Stat(path)
+}
+
+// MkdirAll wrap os.MkdirAll
+func (dfs *diskFS) MkdirAll(path string, mode os.FileMode) error {
+	return os.MkdirAll(path, mode)
+}
+
+// Remove wrap os.Remove
+func (dfs *diskFS) Remove(path string) error {
+	return os.Remove(path)
+}
+
 type getFileOutput struct {
 	file   string
 	err    error
@@ -116,6 +135,9 @@ type DummyFS struct {
 	FindFilesFunc func(string, int) ([]string, error)
 	OpenFunc      func(string) (File, error)
 	CreateFunc    func(string) (File, error)
+	StatFunc      func(path string) (os.FileInfo, error)
+	MkdirAllFunc  func(path string, mode os.FileMode) error
+	RemoveFunc    func(path string) error
 }
 
 // FindFiles calls FindFilesFunc
@@ -131,4 +153,18 @@ func (filesystem *DummyFS) Open(path string) (File, error) {
 // Create calls CreateFunc
 func (filesystem *DummyFS) Create(path string) (File, error) {
 	return filesystem.CreateFunc(path)
+}
+
+// Stat calls StatFunc
+func (filesystem *DummyFS) Stat(path string) (os.FileInfo, error) {
+	return filesystem.StatFunc(path)
+}
+
+// MkdirAll calls MkdirAllFunc
+func (filesystem *DummyFS) MkdirAll(path string, mode os.FileMode) error {
+	return filesystem.MkdirAllFunc(path, mode)
+}
+
+func (filesystem *DummyFS) Remove(path string) error {
+	return filesystem.RemoveFunc(path)
 }
