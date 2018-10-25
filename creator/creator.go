@@ -2,9 +2,7 @@ package creator
 
 import (
 	"bytes"
-	"compress/gzip"
 	"crypto/sha1"
-	"encoding/gob"
 	"io"
 	"path/filepath"
 	"strings"
@@ -19,13 +17,15 @@ import (
 type Creator struct {
 	pieceBuffer buffer.PieceBuffer
 	filesystem  fs.FileSystem
+	readWriter  gorrent.ReadWriter
 }
 
 // NewCreator create a new Gorrent Creator
-func NewCreator(pb buffer.PieceBuffer, filesystem fs.FileSystem) *Creator {
+func NewCreator(pb buffer.PieceBuffer, filesystem fs.FileSystem, rw gorrent.ReadWriter) *Creator {
 	return &Creator{
 		pieceBuffer: pb,
 		filesystem:  filesystem,
+		readWriter:  rw,
 	}
 }
 
@@ -96,12 +96,7 @@ func (c *Creator) Save(dst string, g *gorrent.Gorrent) error {
 	}
 	defer f.Close()
 
-	gzwriter := gzip.NewWriter(f)
-	defer gzwriter.Close()
-
-	gob.Register(gorrent.Gorrent{})
-	encoder := gob.NewEncoder(gzwriter)
-	return encoder.Encode(g)
+	return c.readWriter.Write(f, g)
 }
 
 // Open load gorrent from src file and returns it
@@ -112,20 +107,5 @@ func (c *Creator) Open(src string) (*gorrent.Gorrent, error) {
 	}
 	defer f.Close()
 
-	gzreader, err := gzip.NewReader(f)
-	if err != nil {
-		return nil, err
-	}
-	defer gzreader.Close()
-
-	gob.Register(gorrent.Gorrent{})
-	decoder := gob.NewDecoder(gzreader)
-
-	g := &gorrent.Gorrent{}
-	err = decoder.Decode(g)
-	if err != nil {
-		return nil, err
-	}
-
-	return g, nil
+	return c.readWriter.Read(f)
 }

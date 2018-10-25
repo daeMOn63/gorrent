@@ -19,17 +19,15 @@ type Client interface {
 type client struct {
 	peer      actions.Peer
 	serverCfg ServerConfig
-	hasher    gorrent.Hasher
 }
 
 var _ Client = &client{}
 
 // NewClient returns a new tracker client
-func NewClient(peer actions.Peer, serverCfg ServerConfig, hasher gorrent.Hasher) Client {
+func NewClient(peer actions.Peer, serverCfg ServerConfig) Client {
 	return &client{
 		peer:      peer,
 		serverCfg: serverCfg,
-		hasher:    hasher,
 	}
 }
 
@@ -43,7 +41,7 @@ func (c *client) Announce(g *gorrent.Gorrent, evt actions.AnnounceEvent, status 
 	defer conn.Close()
 
 	data := &actions.Announce{
-		InfoHash: c.hasher.InfoHash(g),
+		InfoHash: g.InfoHash(),
 		Peer:     c.peer,
 		Status:   status,
 		Event:    evt,

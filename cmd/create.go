@@ -57,7 +57,9 @@ func (c *Create) Run(w io.Writer, r io.Reader) error {
 
 	pb := buffer.NewMemoryPieceBuffer(c.pieceLength)
 	filesystem := fs.NewFileSystem()
-	creator := creator.NewCreator(pb, filesystem)
+	rw := gorrent.NewReadWriter()
+
+	creator := creator.NewCreator(pb, filesystem, rw)
 
 	fmt.Fprintf(w, "creating new gorrent:\n")
 	fmt.Fprintf(w, "\t - from: %s\n", c.src)

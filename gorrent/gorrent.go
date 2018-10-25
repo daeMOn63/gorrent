@@ -2,6 +2,7 @@ package gorrent
 
 import (
 	"crypto/sha1"
+	"encoding/hex"
 	"time"
 )
 
@@ -29,6 +30,16 @@ type File struct {
 // Sha1Hash is an alias for sha1 hashes
 type Sha1Hash [sha1.Size]byte
 
+// Bytes returns the Sha1Hash as a byte slice
+func (s Sha1Hash) Bytes() []byte {
+	return s[:]
+}
+
+// HexString returns the hexadecimal string representation of Sha1Hash
+func (s Sha1Hash) HexString() string {
+	return hex.EncodeToString(s.Bytes())
+}
+
 // TotalFileSize return the summed size of all files in this gorrent
 func (g *Gorrent) TotalFileSize() int64 {
 	var t int64
@@ -38,4 +49,19 @@ func (g *Gorrent) TotalFileSize() int64 {
 	}
 
 	return t
+}
+
+// InfoHash returns the gorrent InfoHash, used to uniquely identify it
+func (g *Gorrent) InfoHash() Sha1Hash {
+	hash := sha1.New()
+	for _, f := range g.Files {
+		hash.Write(f.Hash[:])
+	}
+
+	hash.Write([]byte(g.CreationDate.String()))
+
+	out := Sha1Hash{}
+	copy(out[:], hash.Sum(nil))
+
+	return out
 }

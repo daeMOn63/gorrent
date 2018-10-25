@@ -27,6 +27,8 @@ func TestCreator(t *testing.T) {
 
 	filesystem := &fs.DummyFS{}
 
+	rw := gorrent.NewReadWriter()
+
 	properOpenFunc := func(path string) (fs.File, error) {
 		d := &fs.DummyFile{
 			NameVal: path,
@@ -53,7 +55,7 @@ func TestCreator(t *testing.T) {
 		filesystem.FindFilesFunc = properFindFilesFunc
 		filesystem.OpenFunc = properOpenFunc
 
-		creator := NewCreator(pieceBuffer, filesystem)
+		creator := NewCreator(pieceBuffer, filesystem, rw)
 
 		g, err := creator.Create(expectedSourcePath, expectedMaxWorkers)
 		if err != nil {
@@ -108,7 +110,7 @@ func TestCreator(t *testing.T) {
 			return d, nil
 		}
 
-		creator := NewCreator(pieceBuffer, filesystem)
+		creator := NewCreator(pieceBuffer, filesystem, rw)
 
 		g, err := creator.Create(expectedSourcePath, expectedMaxWorkers)
 		if g != nil {
@@ -127,7 +129,7 @@ func TestCreator(t *testing.T) {
 			return nil, expectedErr
 		}
 
-		creator := NewCreator(pieceBuffer, filesystem)
+		creator := NewCreator(pieceBuffer, filesystem, rw)
 		g, err := creator.Create(expectedSourcePath, expectedMaxWorkers)
 		if g != nil {
 			t.Fatalf("Expected gorrent to be nil")
@@ -145,7 +147,7 @@ func TestCreator(t *testing.T) {
 			return nil, expectedErr
 		}
 
-		creator := NewCreator(pieceBuffer, filesystem)
+		creator := NewCreator(pieceBuffer, filesystem, rw)
 		g, err := creator.Create(expectedSourcePath, expectedMaxWorkers)
 		if g != nil {
 			t.Fatalf("Expected gorrent to be nil")
@@ -178,7 +180,7 @@ func TestCreator(t *testing.T) {
 			return d, nil
 		}
 
-		creator := NewCreator(pieceBuffer, filesystem)
+		creator := NewCreator(pieceBuffer, filesystem, rw)
 
 		err := creator.Save(expectedTargetFile, g)
 		if err != nil {
@@ -198,7 +200,7 @@ func TestCreator(t *testing.T) {
 
 		g := &gorrent.Gorrent{}
 
-		creator := NewCreator(pieceBuffer, filesystem)
+		creator := NewCreator(pieceBuffer, filesystem, rw)
 		err := creator.Save(expectedTargetFile, g)
 
 		if err != expectedErr {
@@ -230,7 +232,7 @@ func TestCreator(t *testing.T) {
 			return d, nil
 		}
 
-		creator := NewCreator(pieceBuffer, filesystem)
+		creator := NewCreator(pieceBuffer, filesystem, rw)
 
 		g, err := creator.Open(expectedTargetFile)
 		if err != nil {
@@ -248,7 +250,7 @@ func TestCreator(t *testing.T) {
 			return nil, expectedErr
 		}
 
-		creator := NewCreator(pieceBuffer, filesystem)
+		creator := NewCreator(pieceBuffer, filesystem, rw)
 		_, err := creator.Open(expectedTargetFile)
 
 		if err != expectedErr {

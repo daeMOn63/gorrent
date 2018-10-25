@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 
 	"github.com/daeMOn63/gorrent/fs"
+	"github.com/daeMOn63/gorrent/gorrent"
 
 	"github.com/gorilla/mux"
 )
@@ -37,13 +38,23 @@ func (s *server) Listen() error {
 		return err
 	}
 
-	hander := NewHTTPHandler()
+	store, err := NewStore(s.config.DbPath, 0600)
+	if err != nil {
+		return err
+	}
+
+	readWriter := gorrent.NewReadWriter()
+
+	handler := NewHTTPHandler(store, readWriter)
 
 	router := mux.NewRouter()
-	router.HandleFunc("/add", hander.Add).Methods("POST")
-	router.HandleFunc("/remove/{hash}", hander.Remove).Methods("GET")
-	router.HandleFunc("/info/{hash}", hander.Info).Methods("GET")
-	router.HandleFunc("/", hander.List).Methods("GET")
+	router.HandleFunc("/add", handler.Add).Methods("POST")
+	router.HandleFunc("/remove/{hash}", handler.Remove).Methods("GET")
+	router.HandleFunc("/info/{hash}", handler.Info).Methods("GET")
+	router.HandleFunc("/", handler.List).Methods("GET")
+
+	logger := NewLoggerMiddleware()
+	router.Use(logger.Handle)
 
 	server := http.Server{
 		Handler: router,
