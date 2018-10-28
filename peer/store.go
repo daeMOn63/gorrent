@@ -15,11 +15,25 @@ var (
 	gorrentBucket = []byte("gorrent")
 )
 
+const (
+	// StatusNew is set when the gorrent has just been added to the store
+	StatusNew Status = "new"
+	// StatusCheck is set when the gorrent is currently being check for integrity and completion
+	StatusCheck Status = "checking"
+	// StatusDownloading is set when the gorrent is currently being downloaded
+	StatusDownloading Status = "downloading"
+	// StatusCompleted is set when the gorrent has been fully downloaded and checked
+	StatusCompleted Status = "completed"
+)
+
+// Status defines a string type for holding gorrent status
+type Status string
+
 // GorrentStore defines the methods needed for a Peer store
 type GorrentStore interface {
 	Close() error
-	Save(g *gorrent.Gorrent) error
-	All() ([]*gorrent.Gorrent, error)
+	Save(g *GorrentEntry) error
+	All() ([]*GorrentEntry, error)
 }
 
 type gorrentStore struct {
@@ -27,6 +41,17 @@ type gorrentStore struct {
 }
 
 var _ GorrentStore = &gorrentStore{}
+
+// GorrentEntry defines data saved in the peer database
+type GorrentEntry struct {
+	Name       string
+	Gorrent    *gorrent.Gorrent
+	CreatedAt  time.Time
+	Path       string
+	Uploaded   uint64
+	Downloaded uint64
+	Status     Status
+}
 
 // NewStore creates a new peer store
 func NewStore(path string, mode os.FileMode) (GorrentStore, error) {
@@ -41,7 +66,7 @@ func NewStore(path string, mode os.FileMode) (GorrentStore, error) {
 }
 
 // Save save given gorrent to the store
-func (s *gorrentStore) Save(g *gorrent.Gorrent) error {
+func (s *gorrentStore) Save(g *GorrentEntry) error {
 	return s.db.Update(func(tx *bolt.Tx) error {
 		bucket, err := tx.CreateBucketIfNotExists(gorrentBucket)
 		if err != nil {
@@ -53,7 +78,7 @@ func (s *gorrentStore) Save(g *gorrent.Gorrent) error {
 			return err
 		}
 
-		err = bucket.Put(g.InfoHash().Bytes(), data)
+		err = bucket.Put(g.Gorrent.InfoHash().Bytes(), data)
 		if err != nil {
 			return err
 		}
@@ -62,8 +87,8 @@ func (s *gorrentStore) Save(g *gorrent.Gorrent) error {
 	})
 }
 
-func (s *gorrentStore) All() ([]*gorrent.Gorrent, error) {
-	var list []*gorrent.Gorrent
+func (s *gorrentStore) All() ([]*GorrentEntry, error) {
+	var list []*GorrentEntry
 
 	err := s.db.View(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(gorrentBucket)
@@ -97,7 +122,7 @@ func (s *gorrentStore) Close() error {
 	return s.db.Close()
 }
 
-func (s *gorrentStore) encode(g *gorrent.Gorrent) ([]byte, error) {
+func (s *gorrentStore) encode(g *GorrentEntry) ([]byte, error) {
 
 	var buf bytes.Buffer
 	enc := gob.NewEncoder(&buf)
@@ -109,8 +134,8 @@ func (s *gorrentStore) encode(g *gorrent.Gorrent) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func (s *gorrentStore) decode(data []byte) (*gorrent.Gorrent, error) {
-	g := &gorrent.Gorrent{}
+func (s *gorrentStore) decode(data []byte) (*GorrentEntry, error) {
+	g := &GorrentEntry{}
 
 	r := bytes.NewReader(data)
 	dec := gob.NewDecoder(r)

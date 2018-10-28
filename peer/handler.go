@@ -2,13 +2,23 @@ package peer
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/daeMOn63/gorrent/gorrent"
+
+	"github.com/dustin/go-humanize"
 )
 
 const maxUploadSize = 1000 * 1024 // 1 MB
+
+var (
+	// ErrPathRequired is the error returned when the path parameter is missing on the request
+	ErrPathRequired = errors.New("path is required")
+)
 
 // HTTPHandler hold the handlers available on the peerd server
 type HTTPHandler struct {
@@ -40,8 +50,7 @@ func (h *HTTPHandler) Add(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	file, _, err := r.FormFile("gorrent")
-	log.Print(file)
+	file, fileHeaders, err := r.FormFile("gorrent")
 	if err != nil {
 		writeError(w, err, http.StatusBadRequest)
 
@@ -49,10 +58,26 @@ func (h *HTTPHandler) Add(w http.ResponseWriter, r *http.Request) {
 	}
 	defer file.Close()
 
-	g, err := h.readWriter.Read(file)
+	gorrent, err := h.readWriter.Read(file)
 	if err != nil {
 		writeError(w, err, http.StatusInternalServerError)
 		return
+	}
+
+	path := r.Form.Get("path")
+	if path == "" {
+		writeError(w, ErrPathRequired, http.StatusBadRequest)
+		return
+	}
+
+	g := &GorrentEntry{
+		Name:       fileHeaders.Filename,
+		Gorrent:    gorrent,
+		CreatedAt:  time.Now(),
+		Path:       path,
+		Uploaded:   0,
+		Downloaded: 0,
+		Status:     StatusNew,
 	}
 
 	if err := h.gorrentStore.Save(g); err != nil {
@@ -61,7 +86,7 @@ func (h *HTTPHandler) Add(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeSuccess(w, string(g.InfoHash().HexString()))
+	writeSuccess(w, string(gorrent.InfoHash().HexString()))
 }
 
 // Remove allow to remove an existing gorrent from the server
@@ -75,8 +100,12 @@ func (h *HTTPHandler) Info(w http.ResponseWriter, r *http.Request) {
 }
 
 type listEntry struct {
-	InfoHash string `json:"infoHash"`
-	Size     int64  `json:"size"`
+	InfoHash  string `json:"infoHash"`
+	Name      string `json:"name"`
+	Size      string `json:"size"`
+	CreatedAt string `json:"createdAt"`
+	Completed string `json:"completed"`
+	Status    string `json:"status"`
 }
 
 // List returns the list of gorrent
@@ -93,8 +122,12 @@ func (h *HTTPHandler) List(w http.ResponseWriter, r *http.Request) {
 	for _, g := range list {
 
 		e := listEntry{
-			InfoHash: g.InfoHash().HexString(),
-			Size:     g.TotalFileSize(),
+			InfoHash:  g.Gorrent.InfoHash().HexString(),
+			Name:      g.Name,
+			Size:      humanize.Bytes(g.Gorrent.TotalFileSize()),
+			CreatedAt: humanize.Time(g.CreatedAt),
+			Completed: fmt.Sprintf("%d %%", (g.Downloaded*100)/g.Gorrent.TotalFileSize()),
+			Status:    string(g.Status),
 		}
 
 		entries = append(entries, e)
@@ -109,10 +142,7 @@ func writeSuccess(w http.ResponseWriter, data interface{}) {
 		Data:   data,
 	}
 
-	enc := json.NewEncoder(w)
-	if err := enc.Encode(r); err != nil {
-		log.Printf("writeSuccess error: %s", err)
-	}
+	jsonEncode(w, r)
 }
 
 func writeError(w http.ResponseWriter, e error, status int) {
@@ -121,8 +151,14 @@ func writeError(w http.ResponseWriter, e error, status int) {
 		Message: e.Error(),
 	}
 
+	jsonEncode(w, r)
+}
+
+func jsonEncode(w http.ResponseWriter, response *Response) {
 	enc := json.NewEncoder(w)
-	if err := enc.Encode(r); err != nil {
-		log.Printf("writeError error: %s", err)
+	enc.SetIndent("", "    ")
+
+	if err := enc.Encode(response); err != nil {
+		log.Printf("jsonEncode error: %s", err)
 	}
 }

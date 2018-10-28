@@ -41,11 +41,11 @@ func (s Sha1Hash) HexString() string {
 }
 
 // TotalFileSize return the summed size of all files in this gorrent
-func (g *Gorrent) TotalFileSize() int64 {
-	var t int64
+func (g *Gorrent) TotalFileSize() uint64 {
+	var t uint64
 
 	for _, f := range g.Files {
-		t += f.Length
+		t += uint64(f.Length)
 	}
 
 	return t
