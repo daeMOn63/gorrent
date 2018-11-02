@@ -5,5 +5,6 @@
     "socketPath": "/tmp/gorrent/peerd.sock",
     "dbPath": "/tmp/gorrent/peerd.db",
     "tmpPath": "/tmp/gorrent",
-    "trackerProtocol": "udp"
+    "trackerProtocol": "udp",
+    "announceDelay": 1000
 }

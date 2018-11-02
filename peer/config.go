@@ -18,6 +18,7 @@ type Config struct {
 	DbPath          string `json:"dbPath"`
 	TmpPath         string `json:"tmpPath"`
 	TrackerProtocol string `json:"trackerProtocol"`
+	AnnounceDelay   int    `json:"announceDelay"`
 }
 
 // Configurator allow to load a configuration
@@ -87,6 +88,7 @@ var (
 	ErrConfigDbPathRequired    = errors.New("config: dbPath is required")
 	ErrTmpPathRequired         = errors.New("config: tmpPath is required")
 	ErrTrackerProtocolRequired = errors.New("config: trackerProcotol is required")
+	ErrAnnounceDelayRequired   = errors.New("config: announceDelay is required")
 )
 
 // Validate check given configuration and returns errors when any fields has invalid value
@@ -110,6 +112,10 @@ func (c *configValidator) Validate(cfg *Config) error {
 
 	if len(cfg.TrackerProtocol) == 0 {
 		return ErrTrackerProtocolRequired
+	}
+
+	if cfg.AnnounceDelay <= 0 {
+		return ErrAnnounceDelayRequired
 	}
 
 	return nil

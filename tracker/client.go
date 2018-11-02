@@ -95,11 +95,3 @@ func decodeResponse(b []byte) ([]gorrent.PeerAddr, error) {
 
 	return addrs, nil
 }
-
-// buf := bytes.NewBuffer(nil)
-// err := binary.Write(buf, binary.BigEndian, p)
-// if err != nil {
-// 	return nil, err
-// }
-
-// return buf.Bytes(), nil

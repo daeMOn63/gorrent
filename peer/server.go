@@ -4,6 +4,7 @@ import (
 	"net"
 	"net/http"
 	"path/filepath"
+	"time"
 
 	"github.com/daeMOn63/gorrent/tracker"
 
@@ -77,7 +78,7 @@ func (s *server) Listen() error {
 	}
 	defer conn.Close()
 
-	watcher := NewWatcher(store, s.fs, fileBuffer, tracker)
+	watcher := NewWatcher(store, s.fs, fileBuffer, tracker, time.Duration(s.config.AnnounceDelay)*time.Millisecond)
 	go watcher.Watch()
 
 	return localServer.Serve(conn)

@@ -28,21 +28,23 @@ type Watcher interface {
 }
 
 type watcher struct {
-	store      GorrentStore
-	fs         fs.FileSystem
-	fileBuffer buffer.File
-	tracker    tracker.Client
+	store         GorrentStore
+	fs            fs.FileSystem
+	fileBuffer    buffer.File
+	tracker       tracker.Client
+	announceDelay time.Duration
 }
 
 var _ Watcher = &watcher{}
 
 // NewWatcher creates a new gorrent watcher
-func NewWatcher(store GorrentStore, fs fs.FileSystem, fileBuffer buffer.File, tracker tracker.Client) Watcher {
+func NewWatcher(store GorrentStore, fs fs.FileSystem, fileBuffer buffer.File, tracker tracker.Client, announceDelay time.Duration) Watcher {
 	return &watcher{
-		store:      store,
-		fs:         fs,
-		fileBuffer: fileBuffer,
-		tracker:    tracker,
+		store:         store,
+		fs:            fs,
+		fileBuffer:    fileBuffer,
+		tracker:       tracker,
+		announceDelay: announceDelay,
 	}
 }
 
@@ -103,9 +105,15 @@ func (w *watcher) Watch() error {
 }
 
 func (w *watcher) announce(entry *GorrentEntry) error {
-	nextAnnounce := entry.LastAnnounce.Add(1 * time.Second)
+	nextAnnounce := entry.LastAnnounce.Add(w.announceDelay)
 	if time.Now().After(nextAnnounce) {
 		log.Printf("Announcing %s (%s)", entry.Name, entry.Gorrent.InfoHash().HexString())
+		entry.LastAnnounce = time.Now()
+		err := w.store.Save(entry)
+		if err != nil {
+			return err
+		}
+
 		peers, err := w.tracker.Announce(entry.Gorrent, actions.AnnounceEventStarted, actions.AnnounceStatus{
 			Downloaded: 0,
 			Uploaded:   0,
@@ -113,12 +121,8 @@ func (w *watcher) announce(entry *GorrentEntry) error {
 		if err != nil {
 			return err
 		}
-		entry.LastAnnounce = time.Now()
+
 		log.Printf("Got %d peers: %s", len(peers), peers)
-		err = w.store.Save(entry)
-		if err != nil {
-			return err
-		}
 	}
 
 	return nil
