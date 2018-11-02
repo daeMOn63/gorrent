@@ -11,11 +11,13 @@ import (
 
 // Config list the options for the Peer configuration
 type Config struct {
-	ID         string `json:"id"`
-	PublicIP   net.IP `json:"publicIP"`
-	PublicPort uint16 `json:"publicPort"`
-	SockPath   string `json:"socketPath"`
-	DbPath     string `json:"dbPath"`
+	ID              string `json:"id"`
+	PublicIP        net.IP `json:"publicIP"`
+	PublicPort      uint16 `json:"publicPort"`
+	SockPath        string `json:"socketPath"`
+	DbPath          string `json:"dbPath"`
+	TmpPath         string `json:"tmpPath"`
+	TrackerProtocol string `json:"trackerProtocol"`
 }
 
 // Configurator allow to load a configuration
@@ -80,9 +82,11 @@ func NewConfigValidator() ConfigValidator {
 
 // Validation errors
 var (
-	ErrConfigIDRequired       = errors.New("config: id is required")
-	ErrConfigSockPathRequired = errors.New("config: socketPath is required")
-	ErrConfigDbPathRequired   = errors.New("config: dbPath is required")
+	ErrConfigIDRequired        = errors.New("config: id is required")
+	ErrConfigSockPathRequired  = errors.New("config: socketPath is required")
+	ErrConfigDbPathRequired    = errors.New("config: dbPath is required")
+	ErrTmpPathRequired         = errors.New("config: tmpPath is required")
+	ErrTrackerProtocolRequired = errors.New("config: trackerProcotol is required")
 )
 
 // Validate check given configuration and returns errors when any fields has invalid value
@@ -98,6 +102,14 @@ func (c *configValidator) Validate(cfg *Config) error {
 
 	if len(cfg.DbPath) == 0 {
 		return ErrConfigDbPathRequired
+	}
+
+	if len(cfg.TmpPath) == 0 {
+		return ErrTmpPathRequired
+	}
+
+	if len(cfg.TrackerProtocol) == 0 {
+		return ErrTrackerProtocolRequired
 	}
 
 	return nil

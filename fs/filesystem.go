@@ -14,6 +14,7 @@ type FileSystem interface {
 	Create(path string) (File, error)
 	Stat(path string) (os.FileInfo, error)
 	MkdirAll(path string, mode os.FileMode) error
+	Truncate(name string, size int64) error
 	Remove(path string) error
 }
 
@@ -88,6 +89,11 @@ func (dfs *diskFS) Remove(path string) error {
 	return os.Remove(path)
 }
 
+// Truncate change set given file to given size
+func (dfs *diskFS) Truncate(name string, size int64) error {
+	return os.Truncate(name, size)
+}
+
 type getFileOutput struct {
 	file   string
 	err    error
@@ -137,6 +143,7 @@ type DummyFS struct {
 	CreateFunc    func(string) (File, error)
 	StatFunc      func(path string) (os.FileInfo, error)
 	MkdirAllFunc  func(path string, mode os.FileMode) error
+	TruncateFunc  func(name string, size int64) error
 	RemoveFunc    func(path string) error
 }
 
@@ -165,6 +172,12 @@ func (filesystem *DummyFS) MkdirAll(path string, mode os.FileMode) error {
 	return filesystem.MkdirAllFunc(path, mode)
 }
 
+// Truncate calls TruncateFunc
+func (filesystem *DummyFS) Truncate(name string, size int64) error {
+	return filesystem.TruncateFunc(name, size)
+}
+
+// Remove calls RemoveFunc
 func (filesystem *DummyFS) Remove(path string) error {
 	return filesystem.RemoveFunc(path)
 }

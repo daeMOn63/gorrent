@@ -1,0 +1,9 @@
+{
+    "id": "ecih5Iemoz8keiv2",
+    "publicIP": "127.0.0.1",
+    "publicPort": 16667,
+    "socketPath": "/tmp/gorrent2/peerd.sock",
+    "dbPath": "/tmp/gorrent2/peerd.db",
+    "tmpPath": "/tmp/gorrent2",
+    "trackerProtocol": "udp"
+}

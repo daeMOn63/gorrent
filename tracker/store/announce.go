@@ -10,8 +10,8 @@ import (
 // Announce defines a tracker storage
 type Announce interface {
 	Save(announce *actions.Announce)
-	Find(infoHash gorrent.Sha1Hash, peerID actions.PeerID) *StoredAnnounce
-	FindPeers(infoHash gorrent.Sha1Hash) []actions.Peer
+	Find(infoHash gorrent.Sha1Hash, peerID gorrent.PeerID) *StoredAnnounce
+	FindPeers(infoHash gorrent.Sha1Hash, maxAge time.Duration) []gorrent.Peer
 }
 
 // AnnounceMemory defines a tracker storage using memory only
@@ -20,6 +20,7 @@ type AnnounceMemory struct {
 }
 
 var _ Announce = &AnnounceMemory{}
+var _ Announce = &DummyAnnounce{}
 
 // NewAnnounceMemory creates a new in memory store
 func NewAnnounceMemory() *AnnounceMemory {
@@ -46,7 +47,7 @@ func (m *AnnounceMemory) Save(announce *actions.Announce) {
 }
 
 // Find retrieve a stored announce
-func (m *AnnounceMemory) Find(infoHash gorrent.Sha1Hash, peerID actions.PeerID) *StoredAnnounce {
+func (m *AnnounceMemory) Find(infoHash gorrent.Sha1Hash, peerID gorrent.PeerID) *StoredAnnounce {
 	for _, a := range m.announces {
 		if a.Announce.InfoHash == infoHash && a.Announce.Peer.ID == peerID {
 			return a
@@ -57,12 +58,15 @@ func (m *AnnounceMemory) Find(infoHash gorrent.Sha1Hash, peerID actions.PeerID) 
 }
 
 // FindPeers retrieve all peers on a given infoHash
-func (m *AnnounceMemory) FindPeers(infoHash gorrent.Sha1Hash) []actions.Peer {
-	var peers []actions.Peer
+func (m *AnnounceMemory) FindPeers(infoHash gorrent.Sha1Hash, maxAge time.Duration) []gorrent.Peer {
+	var peers []gorrent.Peer
 
 	for _, a := range m.announces {
 		if a.Announce.InfoHash == infoHash {
-			peers = append(peers, a.Announce.Peer)
+			limit := time.Now().Add(-maxAge)
+			if a.LastUpdated.After(limit) {
+				peers = append(peers, a.Announce.Peer)
+			}
 		}
 	}
 
@@ -72,8 +76,8 @@ func (m *AnnounceMemory) FindPeers(infoHash gorrent.Sha1Hash) []actions.Peer {
 // DummyAnnounce provides a configurable Announce store
 type DummyAnnounce struct {
 	SaveFunc      func(announce *actions.Announce)
-	FindFunc      func(infoHash gorrent.Sha1Hash, peerID actions.PeerID) *StoredAnnounce
-	FindPeersFunc func(infoHash gorrent.Sha1Hash) []actions.Peer
+	FindFunc      func(infoHash gorrent.Sha1Hash, peerID gorrent.PeerID) *StoredAnnounce
+	FindPeersFunc func(infoHash gorrent.Sha1Hash, maxAge time.Duration) []gorrent.Peer
 }
 
 // Save calls SaveFunc
@@ -82,11 +86,11 @@ func (d *DummyAnnounce) Save(announce *actions.Announce) {
 }
 
 // Find calls FindFunc
-func (d *DummyAnnounce) Find(infoHash gorrent.Sha1Hash, peerID actions.PeerID) *StoredAnnounce {
+func (d *DummyAnnounce) Find(infoHash gorrent.Sha1Hash, peerID gorrent.PeerID) *StoredAnnounce {
 	return d.FindFunc(infoHash, peerID)
 }
 
 // FindPeers calls FindPeersFunc
-func (d *DummyAnnounce) FindPeers(infoHash gorrent.Sha1Hash) []actions.Peer {
-	return d.FindPeersFunc(infoHash)
+func (d *DummyAnnounce) FindPeers(infoHash gorrent.Sha1Hash, maxAge time.Duration) []gorrent.Peer {
+	return d.FindPeersFunc(infoHash, maxAge)
 }

@@ -4,6 +4,7 @@ import (
 	"flag"
 	"io"
 	"log"
+	"time"
 
 	"github.com/daeMOn63/gorrent/tracker"
 	"github.com/daeMOn63/gorrent/tracker/actions"
@@ -16,6 +17,7 @@ type TrackerDaemon struct {
 	flagSet *flag.FlagSet
 
 	bind         string
+	maxPeerAge   int
 	readTimeout  int64
 	writeTimeout int64
 }
@@ -30,6 +32,7 @@ func NewTrackerDaemon() Command {
 	}
 
 	cmd.flagSet.StringVar(&cmd.bind, "bind", ":4444", "interface:port where the tracker will listen on.")
+	cmd.flagSet.IntVar(&cmd.maxPeerAge, "maxPeerAge", 5000, "threshold in millisecond where peer are considered dead if they not send an announce")
 	cmd.flagSet.Int64Var(&cmd.readTimeout, "read-timeout", 100, "maximum network read time")
 	cmd.flagSet.Int64Var(&cmd.writeTimeout, "write-timeout", 100, "maximum network write time")
 
@@ -52,7 +55,7 @@ func (c *TrackerDaemon) Run(w io.Writer, r io.Reader) error {
 	actionRouter := actions.NewRouter()
 
 	announceStore := store.NewAnnounceMemory()
-	announceHandler := handlers.NewAnnounce(announceStore)
+	announceHandler := handlers.NewAnnounce(announceStore, time.Duration(c.maxPeerAge)*time.Millisecond)
 
 	actionRouter.Register(actions.AnnounceID, announceHandler)
 

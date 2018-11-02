@@ -3,6 +3,7 @@ package handlers
 import (
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/daeMOn63/gorrent/gorrent"
 
@@ -13,7 +14,7 @@ import (
 func TestAnnounce(t *testing.T) {
 	t.Run("Handle fail on invalid action", func(t *testing.T) {
 		store := &store.DummyAnnounce{}
-		h := NewAnnounce(store)
+		h := NewAnnounce(store, 1*time.Second)
 
 		action := &actions.DummyAction{}
 		out, err := h.Handle(action)
@@ -32,32 +33,33 @@ func TestAnnounce(t *testing.T) {
 		expectedAction := &actions.Announce{
 			InfoHash: expectedInfoHash,
 			Event:    actions.AnnounceEventStarted,
-			Peer: actions.Peer{
-				ID: actions.PeerID(gorrent.RandomSha1Hash()),
-				PeerAddr: actions.PeerAddr{
+			Peer: gorrent.Peer{
+				ID: gorrent.PeerID(gorrent.RandomSha1Hash()),
+				PeerAddr: gorrent.PeerAddr{
 					IPAddr: 1,
 					Port:   2,
 				},
 			},
 		}
 
-		expectedPeer1 := actions.Peer{
-			ID: actions.PeerID(gorrent.RandomSha1Hash()),
-			PeerAddr: actions.PeerAddr{
+		expectedPeer1 := gorrent.Peer{
+			ID: gorrent.PeerID(gorrent.RandomSha1Hash()),
+			PeerAddr: gorrent.PeerAddr{
 				IPAddr: 5,
 				Port:   6,
 			},
 		}
 
-		expectedPeer2 := actions.Peer{
-			ID: actions.PeerID(gorrent.RandomSha1Hash()),
-			PeerAddr: actions.PeerAddr{
+		expectedPeer2 := gorrent.Peer{
+			ID: gorrent.PeerID(gorrent.RandomSha1Hash()),
+			PeerAddr: gorrent.PeerAddr{
 				IPAddr: 7,
 				Port:   8,
 			},
 		}
 
-		expectedPeers := []actions.Peer{expectedPeer1, expectedPeer2}
+		expectedPeers := []gorrent.Peer{expectedPeer1, expectedPeer2}
+		expectedMaxAge := 1 * time.Second
 
 		store := &store.DummyAnnounce{
 			SaveFunc: func(announce *actions.Announce) {
@@ -65,16 +67,20 @@ func TestAnnounce(t *testing.T) {
 					t.Fatalf("Expected action to be %#v, got %#v", expectedAction, announce)
 				}
 			},
-			FindPeersFunc: func(infoHash gorrent.Sha1Hash) []actions.Peer {
+			FindPeersFunc: func(infoHash gorrent.Sha1Hash, maxAge time.Duration) []gorrent.Peer {
 				if reflect.DeepEqual(infoHash, expectedInfoHash) == false {
 					t.Fatalf("Expected infoHash to be %v, got %v", expectedInfoHash, infoHash)
+				}
+
+				if expectedMaxAge != maxAge {
+					t.Fatalf("Expected maxAge to be %#v, got %#v", expectedMaxAge, maxAge)
 				}
 
 				return expectedPeers
 			},
 		}
 
-		h := NewAnnounce(store)
+		h := NewAnnounce(store, expectedMaxAge)
 
 		out, err := h.Handle(expectedAction)
 		if err != nil {

@@ -18,6 +18,7 @@ type Create struct {
 	src         string
 	dst         string
 	fsWorkers   int
+	announce    string
 
 	flagSet *flag.FlagSet
 }
@@ -32,10 +33,10 @@ func NewCreate() Command {
 	}
 
 	cmd.flagSet.StringVar(&cmd.src, "src", "", "Required. File / folder to create the gorrent from.")
+	cmd.flagSet.StringVar(&cmd.announce, "announce", "", "Required. Tracker ip / port.")
 	cmd.flagSet.StringVar(&cmd.dst, "dst", fmt.Sprintf("./%d.gorrent", time.Now().Unix()), "Output filename")
 	cmd.flagSet.IntVar(&cmd.pieceLength, "pieceLength", gorrent.DefaultPieceLength, "Gorrent pieces length.")
 	cmd.flagSet.IntVar(&cmd.fsWorkers, "fsWorkers", 10, "Number of parallel workers when accessing file system")
-
 	return cmd
 }
 
@@ -55,6 +56,10 @@ func (c *Create) Run(w io.Writer, r io.Reader) error {
 		return ErrRequiredFlag{Name: "dst"}
 	}
 
+	if c.announce == "" {
+		return ErrRequiredFlag{Name: "announce"}
+	}
+
 	pb := buffer.NewMemoryPieceBuffer(c.pieceLength)
 	filesystem := fs.NewFileSystem()
 	rw := gorrent.NewReadWriter()
@@ -72,6 +77,7 @@ func (c *Create) Run(w io.Writer, r io.Reader) error {
 		return err
 	}
 	elapsed := time.Since(start)
+	g.Announce = c.announce
 
 	fmt.Fprintf(w, "gorrent created in %s\n", elapsed)
 	fmt.Fprintf(w, "\t - announce url: %s\n", g.Announce)

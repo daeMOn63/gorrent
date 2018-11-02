@@ -5,6 +5,9 @@ import (
 	"net/http"
 	"path/filepath"
 
+	"github.com/daeMOn63/gorrent/tracker"
+
+	"github.com/daeMOn63/gorrent/buffer"
 	"github.com/daeMOn63/gorrent/fs"
 	"github.com/daeMOn63/gorrent/gorrent"
 
@@ -43,9 +46,16 @@ func (s *server) Listen() error {
 		return err
 	}
 
-	readWriter := gorrent.NewReadWriter()
+	fileBuffer := buffer.NewFile(s.fs, s.config.TmpPath)
+	gorrentReadWriter := gorrent.NewReadWriter()
 
-	handler := NewHTTPHandler(store, readWriter)
+	var peerID gorrent.PeerID
+	peerID.SetString(s.config.ID)
+
+	peer := gorrent.NewPeer(s.config.ID, s.config.PublicIP, s.config.PublicPort)
+	tracker := tracker.NewClient(*peer, s.config.TrackerProtocol)
+
+	handler := NewHTTPHandler(store, gorrentReadWriter)
 
 	router := mux.NewRouter()
 	router.HandleFunc("/add", handler.Add).Methods("POST")
@@ -56,7 +66,7 @@ func (s *server) Listen() error {
 	logger := NewLoggerMiddleware()
 	router.Use(logger.Handle)
 
-	server := http.Server{
+	localServer := http.Server{
 		Handler: router,
 	}
 
@@ -67,5 +77,8 @@ func (s *server) Listen() error {
 	}
 	defer conn.Close()
 
-	return server.Serve(conn)
+	watcher := NewWatcher(store, s.fs, fileBuffer, tracker)
+	go watcher.Watch()
+
+	return localServer.Serve(conn)
 }

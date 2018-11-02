@@ -3,6 +3,7 @@ package handlers
 import (
 	"errors"
 	"log"
+	"time"
 
 	"github.com/daeMOn63/gorrent/tracker/actions"
 	"github.com/daeMOn63/gorrent/tracker/store"
@@ -14,13 +15,15 @@ var (
 )
 
 type announce struct {
-	store store.Announce
+	store      store.Announce
+	maxPeerAge time.Duration
 }
 
 // NewAnnounce returns a new Handler for announce actions
-func NewAnnounce(store store.Announce) actions.Handler {
+func NewAnnounce(store store.Announce, maxPeerAge time.Duration) actions.Handler {
 	return &announce{
-		store: store,
+		store:      store,
+		maxPeerAge: maxPeerAge,
 	}
 }
 
@@ -31,11 +34,11 @@ func (h *announce) Handle(a actions.Action) ([]byte, error) {
 		return nil, ErrBadAction
 	}
 
-	log.Printf("announce %s %#x", announceAction.Event.Name(), announceAction.InfoHash)
+	log.Printf("announce %s from %s - %#x", announceAction.Event.Name(), announceAction.Peer.ID, announceAction.InfoHash)
 
 	h.store.Save(announceAction)
 
-	peers := h.store.FindPeers(announceAction.InfoHash)
+	peers := h.store.FindPeers(announceAction.InfoHash, h.maxPeerAge)
 
 	var out []byte
 	for _, p := range peers {

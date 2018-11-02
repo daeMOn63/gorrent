@@ -3,6 +3,7 @@ package peer
 import (
 	"bytes"
 	"encoding/gob"
+	"fmt"
 	"os"
 	"time"
 
@@ -24,6 +25,10 @@ const (
 	StatusDownloading Status = "downloading"
 	// StatusCompleted is set when the gorrent has been fully downloaded and checked
 	StatusCompleted Status = "completed"
+	// StatusCorrupted is set when at least one of the gorrent files failed to pass the integrity check
+	StatusCorrupted Status = "corrupted"
+	// StatusReady is set right after StatusNew, and before StatusDownloading, to indicate that the gorrent is ready to be downloaded
+	StatusReady Status = "ready"
 )
 
 // Status defines a string type for holding gorrent status
@@ -44,13 +49,19 @@ var _ GorrentStore = &gorrentStore{}
 
 // GorrentEntry defines data saved in the peer database
 type GorrentEntry struct {
-	Name       string
-	Gorrent    *gorrent.Gorrent
-	CreatedAt  time.Time
-	Path       string
-	Uploaded   uint64
-	Downloaded uint64
-	Status     Status
+	Name         string
+	Gorrent      *gorrent.Gorrent
+	CreatedAt    time.Time
+	Path         string
+	Uploaded     uint64
+	Downloaded   uint64
+	Status       Status
+	LastAnnounce time.Time
+}
+
+// TmpFileName returns the temporary filename for this entry
+func (g *GorrentEntry) TmpFileName() string {
+	return fmt.Sprintf("%s.dat", g.Gorrent.InfoHash().HexString())
 }
 
 // NewStore creates a new peer store

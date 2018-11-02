@@ -16,8 +16,8 @@ func TestAnnounceMemorySave(t *testing.T) {
 		a := &actions.Announce{
 			Event:    actions.AnnounceEventStarted,
 			InfoHash: gorrent.RandomSha1Hash(),
-			Peer: actions.Peer{
-				ID: actions.PeerID(gorrent.RandomSha1Hash()),
+			Peer: gorrent.Peer{
+				ID: gorrent.PeerID(gorrent.RandomSha1Hash()),
 			},
 		}
 
@@ -45,8 +45,8 @@ func TestAnnounceMemorySave(t *testing.T) {
 		a2 := &actions.Announce{
 			Event:    actions.AnnounceEventCompleted,
 			InfoHash: gorrent.RandomSha1Hash(),
-			Peer: actions.Peer{
-				ID: actions.PeerID(gorrent.RandomSha1Hash()),
+			Peer: gorrent.Peer{
+				ID: gorrent.PeerID(gorrent.RandomSha1Hash()),
 			},
 		}
 
@@ -67,8 +67,8 @@ func TestAnnounceMemorySave(t *testing.T) {
 		a := &actions.Announce{
 			Event:    actions.AnnounceEventCompleted,
 			InfoHash: gorrent.RandomSha1Hash(),
-			Peer: actions.Peer{
-				ID: actions.PeerID(gorrent.RandomSha1Hash()),
+			Peer: gorrent.Peer{
+				ID: gorrent.PeerID(gorrent.RandomSha1Hash()),
 			},
 		}
 
@@ -95,12 +95,12 @@ func TestAnnounceMemoryFindPeers(t *testing.T) {
 		infoHash1 := gorrent.RandomSha1Hash()
 		infoHash2 := gorrent.RandomSha1Hash()
 
-		expectedPeers1 := []actions.Peer{
-			{ID: actions.PeerID(gorrent.RandomSha1Hash())},
-			{ID: actions.PeerID(gorrent.RandomSha1Hash())},
+		expectedPeers1 := []gorrent.Peer{
+			{ID: gorrent.PeerID(gorrent.RandomSha1Hash())},
+			{ID: gorrent.PeerID(gorrent.RandomSha1Hash())},
 		}
-		expectedPeers2 := []actions.Peer{
-			{ID: actions.PeerID(gorrent.RandomSha1Hash())},
+		expectedPeers2 := []gorrent.Peer{
+			{ID: gorrent.PeerID(gorrent.RandomSha1Hash())},
 		}
 
 		a1 := &actions.Announce{
@@ -125,12 +125,12 @@ func TestAnnounceMemoryFindPeers(t *testing.T) {
 		s.Save(a2)
 		s.Save(a3)
 
-		peers := s.FindPeers(infoHash1)
+		peers := s.FindPeers(infoHash1, 1*time.Second)
 		if reflect.DeepEqual(peers, expectedPeers1) == false {
 			t.Fatalf("Expected peers to be %#v, got %#v", expectedPeers1, peers)
 		}
 
-		peers = s.FindPeers(infoHash2)
+		peers = s.FindPeers(infoHash2, 1*time.Second)
 		if reflect.DeepEqual(peers, expectedPeers2) == false {
 			t.Fatalf("Expected peers to be %#v, got %#v", expectedPeers2, peers)
 		}
@@ -139,7 +139,7 @@ func TestAnnounceMemoryFindPeers(t *testing.T) {
 	t.Run("FindPeers returns no peer by default", func(t *testing.T) {
 		s := NewAnnounceMemory()
 
-		peers := s.FindPeers(gorrent.RandomSha1Hash())
+		peers := s.FindPeers(gorrent.RandomSha1Hash(), 1*time.Second)
 		if len(peers) != 0 {
 			t.Fatalf("Expected peers len to be 0, got %d", len(peers))
 		}
@@ -154,7 +154,7 @@ func TestDummyAnnounce(t *testing.T) {
 	saveCalled := false
 
 	expectedInfoHash := gorrent.RandomSha1Hash()
-	expectedPeerID := actions.PeerID(gorrent.RandomSha1Hash())
+	expectedPeerID := gorrent.PeerID(gorrent.RandomSha1Hash())
 
 	expectedStoredAnnounce := &StoredAnnounce{
 		Announce: &actions.Announce{
@@ -163,10 +163,12 @@ func TestDummyAnnounce(t *testing.T) {
 		LastUpdated: time.Now(),
 	}
 
-	expectedPeers := []actions.Peer{
-		{ID: actions.PeerID(gorrent.RandomSha1Hash())},
-		{ID: actions.PeerID(gorrent.RandomSha1Hash())},
+	expectedPeers := []gorrent.Peer{
+		{ID: gorrent.PeerID(gorrent.RandomSha1Hash())},
+		{ID: gorrent.PeerID(gorrent.RandomSha1Hash())},
 	}
+
+	expectedMaxAge := 1 * time.Second
 
 	d := &DummyAnnounce{
 		SaveFunc: func(a *actions.Announce) {
@@ -175,7 +177,7 @@ func TestDummyAnnounce(t *testing.T) {
 			}
 			saveCalled = true
 		},
-		FindFunc: func(infoHash gorrent.Sha1Hash, peerID actions.PeerID) *StoredAnnounce {
+		FindFunc: func(infoHash gorrent.Sha1Hash, peerID gorrent.PeerID) *StoredAnnounce {
 			if reflect.DeepEqual(infoHash, expectedInfoHash) == false {
 				t.Fatalf("Expected infoHash to be %#v, got %#v", expectedInfoHash, infoHash)
 			}
@@ -185,9 +187,13 @@ func TestDummyAnnounce(t *testing.T) {
 
 			return expectedStoredAnnounce
 		},
-		FindPeersFunc: func(infoHash gorrent.Sha1Hash) []actions.Peer {
+		FindPeersFunc: func(infoHash gorrent.Sha1Hash, maxAge time.Duration) []gorrent.Peer {
 			if reflect.DeepEqual(infoHash, expectedInfoHash) == false {
 				t.Fatalf("Expected infoHash to be %#v, got %#v", expectedInfoHash, infoHash)
+			}
+
+			if maxAge != expectedMaxAge {
+				t.Fatalf("Expected maxAge to be %#v, got %#v", expectedMaxAge, maxAge)
 			}
 
 			return expectedPeers
@@ -204,7 +210,7 @@ func TestDummyAnnounce(t *testing.T) {
 		t.Fatalf("Expected stored announce to be %#v, got %#v", expectedStoredAnnounce, storedAnnounce)
 	}
 
-	peers := d.FindPeers(expectedInfoHash)
+	peers := d.FindPeers(expectedInfoHash, expectedMaxAge)
 	if reflect.DeepEqual(peers, expectedPeers) == false {
 		t.Fatalf("Expected peers to be %#v, got %#v", expectedPeers, peers)
 	}
