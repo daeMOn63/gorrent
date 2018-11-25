@@ -2,7 +2,11 @@ package buffer
 
 import (
 	"bufio"
+	"crypto/sha1"
 	"io"
+	"path/filepath"
+
+	"github.com/daeMOn63/gorrent/fs"
 
 	"github.com/daeMOn63/gorrent/gorrent"
 )
@@ -55,11 +59,7 @@ func (pb *MemoryPieceBuffer) CreatePieces(r io.Reader) ([]gorrent.Sha1Hash, erro
 			return newPieces, nil
 		}
 
-		if n < len(buf) {
-			buf = buf[:n]
-		}
-
-		pb.buf.Write(buf)
+		pb.buf.Write(buf[:n])
 		if pb.buf.Len() == pb.pieceLength {
 			newPieces = append(newPieces, pb.buf.Sha1())
 			pb.buf.Reset()
@@ -75,8 +75,125 @@ func (pb *MemoryPieceBuffer) Empty() bool {
 // Flush return a sha1 hash of the current buffer and reset it.
 // It returns an error when Flush is called when internal buffer is empty.
 func (pb *MemoryPieceBuffer) Flush() gorrent.Sha1Hash {
-	hash := pb.buf.Sha1()
+	lastBytes := make([]byte, 0, pb.pieceLength)
+	lastBytes = append(lastBytes, pb.buf.Bytes()...)
+
+	if len(lastBytes) < pb.pieceLength {
+		lastBytes = lastBytes[:pb.pieceLength]
+	}
+
 	pb.buf.Reset()
 
-	return gorrent.Sha1Hash(hash)
+	return gorrent.Sha1Hash(sha1.Sum(lastBytes))
+}
+
+// PieceReader allow to read a Piece
+type PieceReader interface {
+	ReadPiece(workingDir string, g *gorrent.Gorrent, chunkID int64) ([]byte, error)
+}
+
+type pieceReader struct {
+	filesystem fs.FileSystem
+}
+
+var _ PieceReader = &pieceReader{}
+
+// NewPieceReader creates a new piece Reader
+func NewPieceReader(filesystem fs.FileSystem) PieceReader {
+	return &pieceReader{
+		filesystem: filesystem,
+	}
+}
+
+func (p *pieceReader) ReadPiece(workingDir string, g *gorrent.Gorrent, chunkID int64) ([]byte, error) {
+	firstByte := int64(g.PieceLength) * chunkID
+
+	var currentPos int64
+	var reading bool
+
+	chunkData := make([]byte, 0, g.PieceLength)
+
+	for _, f := range g.Files {
+		currentPos += f.Length
+
+		path := filepath.Join(workingDir, f.Name)
+
+		if !reading {
+			if currentPos >= firstByte {
+				reading = true
+				startOffset := firstByte - (currentPos - f.Length)
+
+				err := func() error {
+					fd, err := p.filesystem.Open(path)
+					if err != nil {
+						return err
+					}
+					defer fd.Close()
+
+					if startOffset > 0 {
+						if _, err := fd.Seek(startOffset, 0); err != nil {
+							return err
+						}
+					}
+
+					r := bufio.NewReader(fd)
+
+					maxRead := int64(g.PieceLength)
+					if (f.Length - startOffset) < maxRead {
+						maxRead = f.Length - startOffset
+					}
+
+					buf := make([]byte, maxRead)
+					n, err := r.Read(buf)
+					if err != nil {
+						return err
+					}
+
+					chunkData = append(chunkData, buf[:n]...)
+
+					return nil
+				}()
+
+				if err != nil {
+					return nil, err
+				}
+			}
+		} else {
+			missing := g.PieceLength - len(chunkData)
+			if missing == 0 {
+				break
+			}
+
+			err := func() error {
+				fd, err := p.filesystem.Open(path)
+				if err != nil {
+					return err
+				}
+				defer fd.Close()
+
+				maxRead := int64(missing)
+				if f.Length < maxRead {
+					maxRead = f.Length
+				}
+
+				r := bufio.NewReader(fd)
+				buf := make([]byte, maxRead)
+				n, err := r.Read(buf)
+				if err != nil {
+					return err
+				}
+
+				chunkData = append(chunkData, buf[:n]...)
+
+				return nil
+			}()
+
+			if err != nil {
+				return nil, err
+			}
+
+		}
+	}
+
+	return chunkData, nil
 }

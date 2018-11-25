@@ -48,7 +48,12 @@ func (c *PeerDaemon) Run(w io.Writer, r io.Reader) error {
 		return err
 	}
 
-	server := peer.NewServer(cfg, filesystem)
+	store, err := peer.NewStore(cfg.DbPath, 0600)
+	if err != nil {
+		return err
+	}
+
+	server := peer.NewServer(cfg, filesystem, store)
 
 	log.Printf("peer daemon listening on unix://%s", cfg.SockPath)
 	return server.Listen()

@@ -11,9 +11,15 @@ type File interface {
 	Name() string
 	Stat() (os.FileInfo, error)
 	Read([]byte) (int, error)
+	ReadAt(b []byte, off int64) (n int, err error)
 	Write([]byte) (int, error)
+	WriteAt(b []byte, off int64) (n int, err error)
 	Close() error
+	Seek(offset int64, whence int) (ret int64, err error)
 }
+
+var _ File = &DummyFile{}
+var _ os.FileInfo = &DummyFileInfo{}
 
 // DummyFileInfo implements os.FileInfo and allow to configure its behavior
 type DummyFileInfo struct {
@@ -57,14 +63,17 @@ func (dfi *DummyFileInfo) Sys() interface{} {
 
 // DummyFile implement File and allow to configure its behavior
 type DummyFile struct {
-	NameVal    string
-	Content    []byte
-	StatVal    os.FileInfo
-	StatErr    error
-	CurReadPtr int
-	ReadErr    error
-	WriteErr   error
-	CloseErr   error
+	NameVal     string
+	Content     []byte
+	StatVal     os.FileInfo
+	StatErr     error
+	CurReadPtr  int
+	ReadErr     error
+	WriteErr    error
+	CloseErr    error
+	SeekFunc    func(offset int64, whence int) (ret int64, err error)
+	WriteAtFunc func(b []byte, off int64) (n int, err error)
+	ReadAtFunc  func(b []byte, off int64) (n int, err error)
 }
 
 // Name returns dummyFile NameVal
@@ -115,4 +124,18 @@ func (f *DummyFile) Write(p []byte) (int, error) {
 // Close returns CloseErr field of DummyFile
 func (f *DummyFile) Close() error {
 	return f.CloseErr
+}
+
+// Seek calls SeekFunc
+func (f *DummyFile) Seek(offset int64, whence int) (ret int64, err error) {
+	return f.SeekFunc(offset, whence)
+}
+
+// WriteAt calls WriteAtFunc
+func (f *DummyFile) WriteAt(b []byte, off int64) (n int, err error) {
+	return f.WriteAtFunc(b, off)
+}
+
+func (f *DummyFile) ReadAt(b []byte, off int64) (n int, err error) {
+	return f.ReadAtFunc(b, off)
 }

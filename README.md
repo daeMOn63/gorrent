@@ -5,17 +5,24 @@ It's taking inspiration over the implementation of bittorrent, but getting ride 
 
 ## Notes
 
-### List gorrents
-`curl -XGET --unix-socket /tmp/gorrent/peerd.sock http://localhost/`
+### General
 
-### Add new gorrent
-`curl -XPOST --unix-socket /tmp/gorrent/peerd.sock -F "gorrent=@/tmp/some.gorrent" -F "path=/path/to/storage/"  http://localhost/add`
+#### Create gorrent
+`go run gorrent.go create -src /path/to/sources -dst /tmp/some.gorrent -announce 127.0.0.1:4444`
 
-### Launch peerd
-`go run gorrent.go peerd -config peerd_config_sample2.json`
+### Trackerd
 
-### Launch trackerd
+#### Launch trackerd
 `go run gorrent.go trackerd`
 
-### Create gorrent
-`go run gorrent.go create -src /path/to/sources -dst /tmp/some.gorrent -announce 127.0.0.1:4444`
+### Peerd
+
+#### Launch peerd
+`go run gorrent.go peerd -config peerd_config_sample2.json`
+
+#### List gorrents
+`curl -XGET --unix-socket /tmp/gorrent/peerd.sock http://localhost/`
+
+#### Add new gorrent
+`curl -XPOST --unix-socket /tmp/gorrent/peerd.sock -F "gorrent=@/tmp/some.gorrent" -F "path=/path/to/storage/"  http://localhost/add`
+

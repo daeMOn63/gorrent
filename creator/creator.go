@@ -5,6 +5,7 @@ import (
 	"crypto/sha1"
 	"io"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
@@ -41,6 +42,8 @@ func (c *Creator) Create(rootDir string, maxWorkers int) (*gorrent.Gorrent, erro
 		PieceLength:  c.pieceBuffer.PieceLength(),
 		CreationDate: time.Now(),
 	}
+
+	sort.Strings(filepaths)
 
 	for _, path := range filepaths {
 		file, err := c.filesystem.Open(filepath.Join(rootDir, path))

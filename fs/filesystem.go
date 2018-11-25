@@ -16,6 +16,7 @@ type FileSystem interface {
 	MkdirAll(path string, mode os.FileMode) error
 	Truncate(name string, size int64) error
 	Remove(path string) error
+	OpenFile(name string, flag int, perm os.FileMode) (File, error)
 }
 
 // diskFS is a FileSystem reading from disk
@@ -69,6 +70,11 @@ func (dfs *diskFS) Open(path string) (File, error) {
 	return os.Open(path)
 }
 
+// OpenFile calls os.OpenFile
+func (dfs *diskFS) OpenFile(name string, flag int, perm os.FileMode) (File, error) {
+	return os.OpenFile(name, flag, perm)
+}
+
 // Create create a new file by wrapping around os.Create
 func (dfs *diskFS) Create(path string) (File, error) {
 	return os.Create(path)
@@ -89,7 +95,7 @@ func (dfs *diskFS) Remove(path string) error {
 	return os.Remove(path)
 }
 
-// Truncate change set given file to given size
+// Truncate set given file to given size
 func (dfs *diskFS) Truncate(name string, size int64) error {
 	return os.Truncate(name, size)
 }
@@ -140,6 +146,7 @@ func (dfs *diskFS) getFiles(path string, tokens chan struct{}, ch chan getFileOu
 type DummyFS struct {
 	FindFilesFunc func(string, int) ([]string, error)
 	OpenFunc      func(string) (File, error)
+	OpenFileFunc  func(name string, flag int, perm os.FileMode) (File, error)
 	CreateFunc    func(string) (File, error)
 	StatFunc      func(path string) (os.FileInfo, error)
 	MkdirAllFunc  func(path string, mode os.FileMode) error
@@ -155,6 +162,11 @@ func (filesystem *DummyFS) FindFiles(rootPath string, maxWorkers int) (filepaths
 // Open calls OpenFunc
 func (filesystem *DummyFS) Open(path string) (File, error) {
 	return filesystem.OpenFunc(path)
+}
+
+// OpenFile calls OpenFileFunc
+func (filesystem *DummyFS) OpenFile(name string, flag int, perm os.FileMode) (File, error) {
+	return filesystem.OpenFileFunc(name, flag, perm)
 }
 
 // Create calls CreateFunc

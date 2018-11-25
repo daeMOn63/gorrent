@@ -39,6 +39,7 @@ type GorrentStore interface {
 	Close() error
 	Save(g *GorrentEntry) error
 	All() ([]*GorrentEntry, error)
+	Get(gorrent.Sha1Hash) (*GorrentEntry, error)
 }
 
 type gorrentStore struct {
@@ -49,14 +50,15 @@ var _ GorrentStore = &gorrentStore{}
 
 // GorrentEntry defines data saved in the peer database
 type GorrentEntry struct {
-	Name         string
-	Gorrent      *gorrent.Gorrent
-	CreatedAt    time.Time
-	Path         string
-	Uploaded     uint64
-	Downloaded   uint64
-	Status       Status
-	LastAnnounce time.Time
+	Name            string
+	Gorrent         *gorrent.Gorrent
+	CreatedAt       time.Time
+	Path            string
+	Uploaded        uint64
+	Downloaded      uint64
+	Status          Status
+	PeerAddrs       []gorrent.PeerAddr
+	CompletedChunks []int64
 }
 
 // TmpFileName returns the temporary filename for this entry
@@ -96,6 +98,35 @@ func (s *gorrentStore) Save(g *GorrentEntry) error {
 
 		return nil
 	})
+}
+
+func (s *gorrentStore) Get(infoHash gorrent.Sha1Hash) (*GorrentEntry, error) {
+	entry := &GorrentEntry{}
+
+	err := s.db.View(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(gorrentBucket)
+		if bucket == nil {
+			return nil
+		}
+
+		v := bucket.Get(infoHash.Bytes())
+		if v != nil {
+			var err error
+			entry, err = s.decode(v)
+			if err != nil {
+				return err
+			}
+
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return entry, nil
 }
 
 func (s *gorrentStore) All() ([]*GorrentEntry, error) {
