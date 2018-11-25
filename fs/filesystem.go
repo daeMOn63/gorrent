@@ -57,7 +57,10 @@ func (dfs *diskFS) FindFiles(path string, maxWorkers int) ([]string, error) {
 			// Add all childs and remove current file
 			childs += f.childs - 1
 			if f.file != "" {
-				files = append(files, strings.Replace(f.file, path, "", 1))
+				relPath := strings.Replace(f.file, path, "", 1)
+				if len(relPath) > 0 {
+					files = append(files, relPath)
+				}
 			}
 		}
 	}
@@ -130,11 +133,11 @@ func (dfs *diskFS) getFiles(path string, tokens chan struct{}, ch chan getFileOu
 
 	finfos, err := root.Readdir(-1)
 	if err != nil {
-		ch <- getFileOutput{file: path}
+		ch <- getFileOutput{err: err}
 		return
 	}
 
-	ch <- getFileOutput{childs: len(finfos)}
+	ch <- getFileOutput{file: path, childs: len(finfos)}
 
 	for _, finfo := range finfos {
 		p := filepath.Join(path, finfo.Name())

@@ -31,7 +31,7 @@ func TestFileSystemFindFiles(t *testing.T) {
 
 	t.Run("FindFiles must return list of filepaths", func(t *testing.T) {
 		files, err := filesystem.FindFiles("../test/sample1/data", 4)
-		expectedFileCount := 3
+		expectedFileCount := 6
 		if err != nil {
 			t.Fatalf("unexpected err: %s", err)
 		}
@@ -40,7 +40,7 @@ func TestFileSystemFindFiles(t *testing.T) {
 			t.Fatalf("expected %d files, got %d", expectedFileCount, len(files))
 		}
 
-		expectedFiles := []string{"/lorem.txt", "/pic/kittens/kittens.jpg", "/pic/kittens/kittens_files/kittens2.jpeg"}
+		expectedFiles := []string{"/lorem.txt", "/pic", "/pic/kittens", "/pic/kittens/kittens.jpg", "/pic/kittens/kittens_files", "/pic/kittens/kittens_files/kittens2.jpeg"}
 		if reflect.DeepEqual(files, expectedFiles) == false {
 			t.Fatalf("Expected files %v, got %v", expectedFiles, files)
 		}

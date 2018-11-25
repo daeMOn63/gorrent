@@ -37,35 +37,35 @@ func (c *Creator) Create(rootDir string, maxWorkers int) (*gorrent.Gorrent, erro
 	if err != nil {
 		return nil, err
 	}
-
 	g := &gorrent.Gorrent{
 		PieceLength:  c.pieceBuffer.PieceLength(),
 		CreationDate: time.Now(),
 	}
 
 	sort.Strings(filepaths)
-
 	for _, path := range filepaths {
 		file, err := c.filesystem.Open(filepath.Join(rootDir, path))
 		if err != nil {
 			return nil, err
 		}
 
-		hash := sha1.New()
-		buf := bytes.NewBuffer(nil)
-		tee := io.TeeReader(file, buf)
-		_, err = io.Copy(hash, tee)
-		if err != nil {
-			return nil, err
-		}
-
-		var sha1Hash gorrent.Sha1Hash
-		copy(sha1Hash[:], hash.Sum(nil))
-
 		finfo, err := file.Stat()
 		if err != nil {
 			return nil, err
 		}
+
+		hash := sha1.New()
+		buf := bytes.NewBuffer(nil)
+		if !finfo.IsDir() {
+			tee := io.TeeReader(file, buf)
+			_, err = io.Copy(hash, tee)
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		var sha1Hash gorrent.Sha1Hash
+		copy(sha1Hash[:], hash.Sum(nil))
 
 		g.Files = append(g.Files, gorrent.File{
 			Name:   strings.Replace(file.Name(), rootDir, "", 1),

@@ -136,6 +136,7 @@ func (f *DummyFile) WriteAt(b []byte, off int64) (n int, err error) {
 	return f.WriteAtFunc(b, off)
 }
 
+// ReadAt calls ReadAtFunc
 func (f *DummyFile) ReadAt(b []byte, off int64) (n int, err error) {
 	return f.ReadAtFunc(b, off)
 }

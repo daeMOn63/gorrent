@@ -90,7 +90,7 @@ func TestMemoryPieceBuffer(t *testing.T) {
 		pb.CreatePieces(bytes.NewReader([]byte("12345")))
 		lastPiece := pb.Flush()
 
-		expectedHash := gorrent.Sha1Hash(sha1.Sum([]byte("45")))
+		expectedHash := gorrent.Sha1Hash(sha1.Sum([]byte("45\x00")))
 		if lastPiece != expectedHash {
 			t.Fatalf("Expected last piece hash to be %v, got %v", expectedHash, lastPiece)
 		}
@@ -100,7 +100,7 @@ func TestMemoryPieceBuffer(t *testing.T) {
 		}
 
 		lastPiece = pb.Flush()
-		expectedHash = gorrent.Sha1Hash(sha1.Sum([]byte{}))
+		expectedHash = gorrent.Sha1Hash(sha1.Sum([]byte("\x00\x00\x00")))
 		if lastPiece != expectedHash {
 			t.Fatalf("Expected hash %v, got %v", expectedHash, lastPiece)
 		}
