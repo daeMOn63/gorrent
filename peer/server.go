@@ -170,7 +170,7 @@ func (s *server) listenPeer() error {
 			continue
 		}
 
-		log.Printf("Sending %s chunk %d to %s", chunkRequest.InfoHash.HexString(), chunkRequest.ChunkID, client)
+		log.Printf("Sending %s (%s) chunk %d to %s", chunkRequest.InfoHash.HexString(), entry.Name, chunkRequest.ChunkID, client)
 
 		data = data[:entry.Gorrent.PieceLength]
 

@@ -54,6 +54,7 @@ func (c *Creator) Create(rootDir string, maxWorkers int) (*gorrent.Gorrent, erro
 			return nil, err
 		}
 
+		var sha1Hash gorrent.Sha1Hash
 		hash := sha1.New()
 		buf := bytes.NewBuffer(nil)
 		if !finfo.IsDir() {
@@ -62,24 +63,24 @@ func (c *Creator) Create(rootDir string, maxWorkers int) (*gorrent.Gorrent, erro
 			if err != nil {
 				return nil, err
 			}
+			copy(sha1Hash[:], hash.Sum(nil))
 		}
-
-		var sha1Hash gorrent.Sha1Hash
-		copy(sha1Hash[:], hash.Sum(nil))
 
 		g.Files = append(g.Files, gorrent.File{
 			Name:   strings.Replace(file.Name(), rootDir, "", 1),
 			Length: finfo.Size(),
+			IsDir:  finfo.IsDir(),
 			Hash:   sha1Hash,
 		})
 
-		newPieces, err := c.pieceBuffer.CreatePieces(buf)
-		if err != nil {
-			return nil, err
+		if buf.Len() > 0 {
+			newPieces, err := c.pieceBuffer.CreatePieces(buf)
+			if err != nil {
+				return nil, err
+			}
+
+			g.Pieces = append(g.Pieces, newPieces...)
 		}
-
-		g.Pieces = append(g.Pieces, newPieces...)
-
 		file.Close()
 	}
 

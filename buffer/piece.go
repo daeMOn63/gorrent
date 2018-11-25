@@ -114,6 +114,10 @@ func (p *pieceReader) ReadPiece(workingDir string, g *gorrent.Gorrent, chunkID i
 	chunkData := make([]byte, 0, g.PieceLength)
 
 	for _, f := range g.Files {
+		if f.IsDir {
+			continue
+		}
+
 		currentPos += f.Length
 
 		path := filepath.Join(workingDir, f.Name)

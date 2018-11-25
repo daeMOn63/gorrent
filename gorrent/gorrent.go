@@ -24,6 +24,7 @@ type Gorrent struct {
 type File struct {
 	Name   string
 	Length int64
+	IsDir  bool
 	Hash   Sha1Hash
 }
 

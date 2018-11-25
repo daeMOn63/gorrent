@@ -127,6 +127,15 @@ func (w *watcher) processCheck(entry *GorrentEntry) error {
 
 	var currentOffset int64
 	for _, file := range entry.Gorrent.Files {
+		filePath := filepath.Join(entry.Path, file.Name)
+		if file.IsDir {
+			if err := w.fs.MkdirAll(filePath, 0755); err != nil {
+				return err
+			}
+
+			continue
+		}
+
 		data, err := chunkedFile.Read(file.Length, currentOffset)
 		if err != nil {
 			return err
@@ -140,7 +149,6 @@ func (w *watcher) processCheck(entry *GorrentEntry) error {
 			return ErrIntegrityCheckFailed
 		}
 
-		filePath := filepath.Join(entry.Path, file.Name)
 		if err := w.fs.MkdirAll(filepath.Dir(filePath), 0755); err != nil {
 			return err
 		}
@@ -303,15 +311,21 @@ func (w *watcher) processNew(entry *GorrentEntry) error {
 	return w.store.Save(entry)
 }
 
-func checkIntegrity(r io.Reader, expectedHash gorrent.Sha1Hash) error {
-	hash := sha1.New()
-	_, err := io.Copy(hash, r)
+func checkIntegrity(f fs.File, expectedHash gorrent.Sha1Hash) error {
+	finfo, err := f.Stat()
 	if err != nil {
 		return err
 	}
 
 	var sha1Hash gorrent.Sha1Hash
-	copy(sha1Hash[:], hash.Sum(nil))
+	hash := sha1.New()
+	if !finfo.IsDir() {
+		_, err := io.Copy(hash, f)
+		if err != nil {
+			return err
+		}
+		copy(sha1Hash[:], hash.Sum(nil))
+	}
 
 	if sha1Hash.HexString() != expectedHash.HexString() {
 		return ErrIntegrityCheckFailed
