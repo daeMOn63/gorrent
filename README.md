@@ -18,6 +18,7 @@ It's taking inspiration over the implementation of bittorrent, but getting ride 
 ### Peerd
 
 #### Launch peerd
+`go run gorrent.go peerd -config peerd_config_sample.json`
 `go run gorrent.go peerd -config peerd_config_sample2.json`
 
 #### List gorrents

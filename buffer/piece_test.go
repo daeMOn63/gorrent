@@ -4,9 +4,14 @@ import (
 	"bytes"
 	"crypto/sha1"
 	"errors"
+	"io/ioutil"
+	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/daeMOn63/gorrent/fs"
 
 	"github.com/daeMOn63/gorrent/gorrent"
 )
@@ -132,5 +137,121 @@ func TestMemoryPieceBuffer(t *testing.T) {
 		if err != errBrokenReader {
 			t.Fatalf("Expected error %s, got %s", errBrokenReader, err)
 		}
+	})
+}
+
+func TestPieceReader(t *testing.T) {
+
+	rootDirectory := "./test/pieceReader"
+	if err := os.MkdirAll(rootDirectory, 0755); err != nil {
+		t.Fatalf("Cannot create root directory %s: %s", rootDirectory, err)
+	}
+
+	file1Path := filepath.Join(rootDirectory, "a")
+	file1Content := []byte(strings.Repeat("A", 10))
+
+	file2Path := filepath.Join(rootDirectory, "b")
+	file2Content := []byte(strings.Repeat("B", 10))
+
+	file3Path := filepath.Join(rootDirectory, "c")
+	file3Content := []byte(strings.Repeat("C", 10))
+
+	if err := ioutil.WriteFile(file1Path, file1Content, 0755); err != nil {
+		t.Fatalf("Cannot write file %s: %s", file1Path, err)
+	}
+	if err := ioutil.WriteFile(file2Path, file2Content, 0755); err != nil {
+		t.Fatalf("Cannot write file %s: %s", file1Path, err)
+	}
+	if err := ioutil.WriteFile(file3Path, file3Content, 0755); err != nil {
+		t.Fatalf("Cannot write file %s: %s", file1Path, err)
+	}
+
+	gorrentFiles := []gorrent.File{
+		gorrent.File{IsDir: false, Length: 10, Name: "a"},
+		gorrent.File{IsDir: true, Length: 0, Name: "whatever"},
+		gorrent.File{IsDir: false, Length: 10, Name: "b"},
+		gorrent.File{IsDir: true, Length: 0, Name: "whatever2"},
+		gorrent.File{IsDir: false, Length: 10, Name: "c"},
+	}
+
+	defer func() {
+		if err := os.RemoveAll(rootDirectory); err != nil {
+			t.Fatalf("Cannot remove root directory %s: %s", rootDirectory, err)
+		}
+	}()
+
+	pieceReader := NewPieceReader(fs.NewFileSystem())
+
+	t.Run("ReadPiece returns proper bytes", func(t *testing.T) {
+		testData := []struct {
+			pieceIndex   int64
+			expectedData []byte
+		}{
+			{0, file1Content},
+			{1, file2Content},
+			{2, file3Content},
+		}
+
+		for _, tdata := range testData {
+			data, err := pieceReader.ReadPiece(rootDirectory, gorrentFiles, tdata.pieceIndex, 10)
+			if err != nil {
+				t.Fatalf("Expected err to be nil, got %s", err)
+			}
+
+			if bytes.Equal(data, tdata.expectedData) == false {
+				t.Fatalf("Expected data to be %v, got %v", tdata.expectedData, data)
+			}
+		}
+	})
+
+	t.Run("ReadPiece properly deal with piece extending on multiple files", func(t *testing.T) {
+		data, err := pieceReader.ReadPiece(rootDirectory, gorrentFiles, 0, 30)
+		if err != nil {
+			t.Fatalf("Expected err to be nil, got %s", err)
+		}
+
+		expectedData := append(file1Content, file2Content...)
+		expectedData = append(expectedData, file3Content...)
+		if bytes.Equal(data, expectedData) == false {
+			t.Fatalf("Expected data to be %v, got %v", expectedData, data)
+		}
+	})
+
+	t.Run("ReadPiece properly deal with smaller pieces", func(t *testing.T) {
+		expectedData := append(file1Content, file2Content...)
+		expectedData = append(expectedData, file3Content...)
+
+		size := 3
+		for i := 0; i < len(expectedData)/size; i++ {
+			data, err := pieceReader.ReadPiece(rootDirectory, gorrentFiles, int64(i), size)
+			if err != nil {
+				t.Fatalf("Expected err to be nil, got %s", err)
+			}
+
+			if bytes.Equal(data, expectedData[i*size:(i*size)+size]) == false {
+				t.Fatalf("Expected data to be %v, got %v", expectedData[i*size:(i*size)+size], data)
+			}
+		}
+	})
+
+	t.Run("ReadPiece returns error on partial or empty piece", func(t *testing.T) {
+		data, err := pieceReader.ReadPiece(rootDirectory, gorrentFiles, 4, 10)
+		if data != nil {
+			t.Fatalf("Expected data to be nil, got %v", data)
+		}
+
+		if err != ErrReadPieceNoData {
+			t.Fatalf("Expected err to be %s, got %s", ErrReadPieceNoData, err)
+		}
+
+		data, err = pieceReader.ReadPiece(rootDirectory, gorrentFiles, 4, 7)
+		if data != nil {
+			t.Fatalf("Expected data to be nil, got %v", data)
+		}
+
+		if err != ErrReadPieceInvalidData {
+			t.Fatalf("Expected err to be %s, got %s", ErrReadPieceInvalidData, err)
+		}
+
 	})
 }
