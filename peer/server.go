@@ -163,7 +163,7 @@ func (s *server) listenPeer() error {
 			continue
 		}
 
-		data, err := pieceReader.ReadPiece(entry.Path, entry.Gorrent, chunkRequest.ChunkID)
+		data, err := pieceReader.ReadPiece(entry.Path, entry.Gorrent.Files, chunkRequest.ChunkID, entry.Gorrent.PieceLength)
 		if err != nil {
 			log.Println(err)
 
