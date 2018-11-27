@@ -245,13 +245,8 @@ func TestPieceReader(t *testing.T) {
 		}
 
 		data, err = pieceReader.ReadPiece(rootDirectory, gorrentFiles, 4, 7)
-		if data != nil {
-			t.Fatalf("Expected data to be nil, got %v", data)
+		if bytes.Equal(data, []byte("CC")) == false {
+			t.Fatalf("Expected data to be %v, got %v", []byte("CC"), data)
 		}
-
-		if err != ErrReadPieceInvalidData {
-			t.Fatalf("Expected err to be %s, got %s", ErrReadPieceInvalidData, err)
-		}
-
 	})
 }

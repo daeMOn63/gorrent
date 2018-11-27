@@ -91,8 +91,6 @@ func (pb *MemoryPieceBuffer) Flush() gorrent.Sha1Hash {
 var (
 	// ErrReadPieceNoData is returned when nothing could be read from given pieceID
 	ErrReadPieceNoData = errors.New("no data")
-	// ErrReadPieceInvalidData is returned when the length of data doesn't match the expected pieceLength
-	ErrReadPieceInvalidData = errors.New("invalid data")
 )
 
 // PieceReader allow to read a Piece
@@ -180,10 +178,6 @@ func (p *pieceReader) ReadPiece(workingDir string, files []gorrent.File, pieceID
 
 	if len(chunkData) == 0 {
 		return nil, ErrReadPieceNoData
-	}
-
-	if len(chunkData) != pieceLength {
-		return nil, ErrReadPieceInvalidData
 	}
 
 	return chunkData, nil
