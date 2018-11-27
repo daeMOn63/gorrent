@@ -31,6 +31,7 @@ func NewCreator(pb buffer.PieceBuffer, filesystem fs.FileSystem, rw gorrent.Read
 }
 
 // Create return a new gorrent from files under rootDir and given pieceLength
+// TODO: handle symlinks properly
 func (c *Creator) Create(rootDir string, maxWorkers int) (*gorrent.Gorrent, error) {
 
 	filepaths, err := c.filesystem.FindFiles(rootDir, maxWorkers)

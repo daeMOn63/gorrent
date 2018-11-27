@@ -1,4 +1,4 @@
-package peer
+package handlers
 
 import (
 	"encoding/json"
@@ -9,10 +9,12 @@ import (
 	"time"
 
 	"github.com/daeMOn63/gorrent/gorrent"
+	"github.com/daeMOn63/gorrent/peer"
 
 	"github.com/dustin/go-humanize"
 )
 
+// TODO: move to config
 const maxUploadSize = 1000 * 1024 // 1 MB
 
 var (
@@ -20,15 +22,15 @@ var (
 	ErrPathRequired = errors.New("path is required")
 )
 
-// HTTPHandler hold the handlers available on the peerd server
-type HTTPHandler struct {
-	gorrentStore GorrentStore
+// LocalHTTP hold the handlers available on the peerd server
+type LocalHTTP struct {
+	gorrentStore peer.GorrentStore
 	readWriter   gorrent.ReadWriter
 }
 
-// NewHTTPHandler returns a new HTTPHandler
-func NewHTTPHandler(gorrentStore GorrentStore, rw gorrent.ReadWriter) *HTTPHandler {
-	return &HTTPHandler{
+// NewLocalHTTP returns a new LocalHTTP
+func NewLocalHTTP(gorrentStore peer.GorrentStore, rw gorrent.ReadWriter) *LocalHTTP {
+	return &LocalHTTP{
 		gorrentStore: gorrentStore,
 		readWriter:   rw,
 	}
@@ -42,7 +44,7 @@ type Response struct {
 }
 
 // Add allow to add a new gorrent to the local server
-func (h *HTTPHandler) Add(w http.ResponseWriter, r *http.Request) {
+func (h *LocalHTTP) Add(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, maxUploadSize)
 	if err := r.ParseMultipartForm(maxUploadSize); err != nil {
 		writeError(w, err, http.StatusBadRequest)
@@ -70,14 +72,14 @@ func (h *HTTPHandler) Add(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	g := &GorrentEntry{
+	g := &peer.GorrentEntry{
 		Name:       fileHeaders.Filename,
 		Gorrent:    gorrent,
 		CreatedAt:  time.Now(),
 		Path:       path,
 		Uploaded:   0,
 		Downloaded: 0,
-		Status:     StatusNew,
+		Status:     peer.StatusNew,
 	}
 
 	if err := h.gorrentStore.Save(g); err != nil {
@@ -90,13 +92,13 @@ func (h *HTTPHandler) Add(w http.ResponseWriter, r *http.Request) {
 }
 
 // Remove allow to remove an existing gorrent from the server
-func (h *HTTPHandler) Remove(w http.ResponseWriter, r *http.Request) {
-
+func (h *LocalHTTP) Remove(w http.ResponseWriter, r *http.Request) {
+	// TODO: implement
 }
 
 // Info returns information about a given gorrent
-func (h *HTTPHandler) Info(w http.ResponseWriter, r *http.Request) {
-
+func (h *LocalHTTP) Info(w http.ResponseWriter, r *http.Request) {
+	// TODO: implement
 }
 
 type listEntry struct {
@@ -109,7 +111,7 @@ type listEntry struct {
 }
 
 // List returns the list of gorrent
-func (h *HTTPHandler) List(w http.ResponseWriter, r *http.Request) {
+func (h *LocalHTTP) List(w http.ResponseWriter, r *http.Request) {
 	list, err := h.gorrentStore.All()
 	if err != nil {
 		writeError(w, err, http.StatusInternalServerError)
